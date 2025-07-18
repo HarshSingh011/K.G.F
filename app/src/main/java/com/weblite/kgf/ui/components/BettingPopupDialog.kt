@@ -26,10 +26,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.weblite.kgf.ui.screens.game.getNumberBackgroundColor
-import com.weblite.kgf.ui.screens.game.WingoGameViewModel
-import com.weblite.kgf.Api2.Resource // fallback import, update if game section has its own
+import com.weblite.kgf.viewmodel.WingoGameViewModel
 import kotlinx.coroutines.launch
 
 @Composable

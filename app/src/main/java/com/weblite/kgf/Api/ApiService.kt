@@ -1,11 +1,12 @@
 package com.weblite.kgf.Api2
 
 import com.weblite.kgf.data.PeriodIdResponse
-import com.weblite.kgf.data.Wingo60PeriodIdResponse // Import the new data class
+import com.weblite.kgf.data.Wingo60SecDataClasses.GameHistory60SecResponse
+import com.weblite.kgf.data.Wingo60SecDataClasses.Wingo60PeriodIdResponse // Import the new data class
+import com.weblite.kgf.data.Wingo60SecDataClasses.Wingo60SecMyHistoryResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
-import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Query
 
@@ -45,11 +46,10 @@ interface ApiService {
     @GET("web/Api/promotionView")
     suspend fun getPromotionView(@Query("user_id") userId: String): Response<PromotionViewResponse>
 
+    // Wingo 30-second game APIs
+
     @GET("web/Api/wingo30SecPeriodID")
     suspend fun getThirtySecondPeriodID() : Response<PeriodIdResponse>
-
-    @GET("web/Api/wingo1MinPeriodID") // New API endpoint for 60-second game
-    suspend fun getSixtySecondPeriodID(@Query("user_id") userId: String?) : Response<Wingo60PeriodIdResponse>
 
     @POST("web/Api/wingo30SecBet")
     suspend fun placeBet(@Body request: BetRequest): Response<BetResponse>
@@ -57,7 +57,17 @@ interface ApiService {
     @GET("web/Api/Wing30SecGameHistory")
     suspend fun getWingo30SecGameHistory(): Response<GameHistoryResponse>
 
-
     @GET("web/Api/wingo30secMyHistory")
     suspend fun getWingo30SecMyHistory(@Query("user_id") userId: String): Response<MyHistoryResponse>
+
+    // Wingo 60-second game APIs
+
+    @GET("web/Api/wingo1MinPeriodID") // New API endpoint for 60-second game
+    suspend fun getSixtySecondPeriodID(@Query("user_id") userId: String?) : Response<Wingo60PeriodIdResponse>
+
+    @GET("web/Api/Wing1MinGameHistory")
+    suspend fun getWingo60SecGameHistory(): Response<GameHistory60SecResponse>
+
+    @GET("web/Api/wingo1MinMyHistory")
+    suspend fun getWingo60SecMyHistory(@Query("user_id") userId: String): Response<Wingo60SecMyHistoryResponse>
 }
