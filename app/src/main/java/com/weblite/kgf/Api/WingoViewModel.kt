@@ -56,9 +56,9 @@ class WingoViewModel @Inject constructor(
     }
 
     // Call this when navigating to game screen
-    suspend fun fetchPeriodInfoAndSave() {
-        timerService.fetchInitialData()
-    }
+//    suspend fun fetchPeriodInfoAndSave() {
+//        timerService.fetchInitialData()
+//    }
 
     private val _periodId = MutableSharedFlow<PeriodIdUIEvent>()
     val periodId : SharedFlow<PeriodIdUIEvent> = _periodId

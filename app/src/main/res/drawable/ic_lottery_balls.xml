@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Background rectangle -->
+    <path
+        android:fillColor="#10000000"
+        android:pathData="M2,4h20v16H2z" />
+
+    <!-- Red ball -->
+    <path
+        android:fillColor="#FF5252"
+        android:pathData="M6,12a3,3 0,1 1,6 0a3,3 0,1 1,-6 0z" />
+
+    <!-- Yellow ball -->
+    <path
+        android:fillColor="#FFEB3B"
+        android:pathData="M12,12a3,3 0,1 1,6 0a3,3 0,1 1,-6 0z" />
+
+    <!-- Green ball -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M18,12a3,3 0,1 1,6 0a3,3 0,1 1,-6 0z" />
+</vector>
