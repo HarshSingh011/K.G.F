@@ -35,7 +35,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -70,6 +69,7 @@ import com.weblite.kgf.ui.screens.KGFLogoText
 import com.weblite.kgf.R
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.weblite.kgf.viewmodel.Wingo60GameViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -140,6 +140,16 @@ fun Wingo60Screen(
             NumberItem(8, Color.Red),
             NumberItem(9, Color.Green)
         )
+    }
+
+    val showCountdownOverlay = timeRemaining <= 5 && timeRemaining > 0
+
+    LaunchedEffect(showCountdownOverlay) {
+        if (showCountdownOverlay && showBettingPopup) {
+            android.util.Log.d("Wingo30Screen", "Auto-closing betting dialog due to countdown overlay")
+            showBettingPopup = false
+            colorSelected = false
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -397,120 +407,200 @@ fun Wingo60Screen(
 
             // COMBINED GAME SECTION
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                Box {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
                     ) {
-                        // Color Selection (Green, Violet, Red)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            ColorButton(
-                                text = "Green",
-                                color = Color(0xFF4CAF50),
-                                isSelected = selectedColor == "Green",
-                                onClick = {
-                                    selectedColor = "Green"
-                                    colorSelected = true
-                                    selectedColorForBetting = selectedColor
-                                    showBettingPopup = true
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                            ColorButton(
-                                text = "Violet",
-                                color = Color(0xFF9C27B0),
-                                isSelected = selectedColor == "Violet",
-                                onClick = {
-                                    selectedColor = "Violet"
-                                    colorSelected = true
-                                    selectedColorForBetting = selectedColor
-                                    showBettingPopup = true
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                            ColorButton(
-                                text = "Red",
-                                color = Color(0xFFE53935),
-                                isSelected = selectedColor == "Red",
-                                onClick = {
-                                    selectedColor = "Red"
-                                    colorSelected = true
-                                    selectedColorForBetting = selectedColor
-                                    showBettingPopup = true
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        // Number Selection Grid - WITH POPUP TRIGGER
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(5),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.height(95.dp)
-                        ) {
-                            items(numberItems) { item ->
-                                ImageNumberButton(
-                                    number = item.number,
-                                    isSelected = selectedNumbers.contains(item.number),
+                            // Color Selection (Green, Violet, Red)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                ColorButton(
+                                    text = "Green",
+                                    color = Color(0xFF4CAF50),
+                                    isSelected = selectedColor == "Green",
                                     onClick = {
-                                        // THIS IS WHERE THE POPUP IS TRIGGERED
-                                        selectedNumberForBetting = item.number
-                                        showBettingPopup = true
-                                    }
+                                        if (!showCountdownOverlay) {
+                                            selectedColor = "Green"
+                                            colorSelected = true
+                                            selectedColorForBetting = selectedColor
+                                            showBettingPopup = true
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                ColorButton(
+                                    text = "Violet",
+                                    color = Color(0xFF9C27B0),
+                                    isSelected = selectedColor == "Violet",
+                                    onClick = {
+                                        if (!showCountdownOverlay) {
+                                            selectedColor = "Violet"
+                                            colorSelected = true
+                                            selectedColorForBetting = selectedColor
+                                            showBettingPopup = true
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                ColorButton(
+                                    text = "Red",
+                                    color = Color(0xFFE53935),
+                                    isSelected = selectedColor == "Red",
+                                    onClick = {
+                                        if (!showCountdownOverlay) {
+                                            selectedColor = "Red"
+                                            colorSelected = true
+                                            selectedColorForBetting = selectedColor
+                                            showBettingPopup = true
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+
+                            // Number Selection Grid - WITH POPUP TRIGGER
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(5),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.height(95.dp)
+                            ) {
+                                items(numberItems) { item ->
+                                    ImageNumberButton(
+                                        number = item.number,
+                                        isSelected = selectedNumbers.contains(item.number),
+                                        onClick = {
+                                            if (!showCountdownOverlay) {
+                                                selectedNumberForBetting = item.number
+                                                colorSelected = false
+                                                showBettingPopup = true
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+
+                            // Multiplier Selection
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(
+                                    listOf(
+                                        "Random",
+                                        "X1",
+                                        "X5",
+                                        "X10",
+                                        "X50",
+                                        "X100"
+                                    )
+                                ) { multiplier ->
+                                    MultiplierButton(
+                                        text = multiplier,
+                                        isSelected = selectedMultiplier == multiplier,
+                                        onClick = {
+                                            if (!showCountdownOverlay) {
+                                                selectedMultiplier = multiplier
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+
+                            // Big/Small Selection
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                BigSmallButton(
+                                    text = "Big",
+                                    color = Color(0xFFFFC107),
+                                    isSelected = selectedBigSmall == "Big",
+                                    onClick = {
+                                        if (!showCountdownOverlay) {
+                                            selectedBigSmall = "Big" // Set the selected Big/Small value
+                                            colorSelected = true // Treat Big/Small as a color bet for popup
+                                            selectedColorForBetting = selectedBigSmall // Pass to popup
+                                            showBettingPopup = true // Open the betting popup
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                BigSmallButton(
+                                    text = "Small",
+                                    color = Color(0xFF2196F3),
+                                    isSelected = selectedBigSmall == "Small",
+                                    onClick = {
+                                        if (!showCountdownOverlay) {
+                                            selectedBigSmall = "Small" // Set the selected Big/Small value
+                                            colorSelected = true // Treat Big/Small as a color bet for popup
+                                            selectedColorForBetting = selectedBigSmall // Pass to popup
+                                            showBettingPopup = true // Open the betting popup
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
                         }
+                    }
 
-                        // Multiplier Selection
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    // Countdown Overlay - appears only over Combined Game Section in last 5 seconds
+                    if (showCountdownOverlay) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center
                         ) {
-                            items(
-                                listOf(
-                                    "Random",
-                                    "X1",
-                                    "X5",
-                                    "X10",
-                                    "X50",
-                                    "X100"
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 80.dp)
+                            ) {
+                                // First digit (0)
+                                Box(
+                                    modifier = Modifier
+                                        .background(Color.White, RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                                ) {
+                                    Text(
+                                        text = "0",
+                                        color = Color(0xFFFF6B35),
+                                        fontSize = 32.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                // Colon
+                                Text(
+                                    text = ":",
+                                    color = Color.White,
+                                    fontSize = 32.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
-                            ) { multiplier ->
-                                MultiplierButton(
-                                    text = multiplier,
-                                    isSelected = selectedMultiplier == multiplier,
-                                    onClick = { selectedMultiplier = multiplier }
-                                )
+
+                                // Second digit (countdown)
+                                Box(
+                                    modifier = Modifier
+                                        .background(Color.White, RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                                ) {
+                                    Text(
+                                        text = timeRemaining.toString(),
+                                        color = Color(0xFFFF6B35),
+                                        fontSize = 32.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
-                        }
-
-                        // Big/Small Selection
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            BigSmallButton(
-                                text = "Big",
-                                color = Color(0xFFFFC107),
-                                isSelected = selectedBigSmall == "Big",
-                                onClick = { selectedBigSmall = "Big" },
-                                modifier = Modifier.weight(1f)
-                            )
-                            BigSmallButton(
-                                text = "Small",
-                                color = Color(0xFF2196F3),
-                                isSelected = selectedBigSmall == "Small",
-                                onClick = { selectedBigSmall = "Small" },
-                                modifier = Modifier.weight(1f)
-                            )
                         }
                     }
                 }
@@ -525,13 +615,19 @@ fun Wingo60Screen(
                     HistoryTabButton(
                         text = "Game History",
                         isSelected = selectedHistoryTab == "Game History",
-                        onClick = { selectedHistoryTab = "Game History" },
+                        onClick = {
+                            selectedHistoryTab = "Game History"
+                            viewModel.onGameHistoryTabSelected() // Start frequent polling
+                        },
                         modifier = Modifier.weight(1f)
                     )
                     HistoryTabButton(
                         text = "My History",
                         isSelected = selectedHistoryTab == "My History",
-                        onClick = { selectedHistoryTab = "My History" },
+                        onClick = {
+                            selectedHistoryTab = "My History"
+                            viewModel.onMyHistoryTabSelected() // Stop polling and fetch my history once
+                        },
                         modifier = Modifier.weight(1f)
                     )
                 }

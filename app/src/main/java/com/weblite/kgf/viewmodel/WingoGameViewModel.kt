@@ -1,4 +1,4 @@
-package com.weblite.kgf.ui.screens.game
+package com.weblite.kgf.viewmodel
 
 import android.app.Application
 import android.util.Log
@@ -18,7 +18,6 @@ import com.weblite.kgf.Api2.PeriodIdUIEvent
 import com.weblite.kgf.Api2.SharedPrefManager
 import com.weblite.kgf.Api2.GameHistoryResponse
 import com.weblite.kgf.Api2.MyHistoryResponse
-import com.weblite.kgf.data.PeriodIdResponse
 import javax.inject.Inject
 
 @HiltViewModel
@@ -194,14 +193,6 @@ class WingoGameViewModel @Inject constructor(
             }
         }
     }
-
-    // Helper function to compare MyHistoryResponse objects (removed for now to force updates)
-    // private fun areMyHistoriesIdentical(old: MyHistoryResponse, new: MyHistoryResponse): Boolean {
-    //     if (old.result.history.size != new.result.history.size) return false
-    //     if (old.result.history.isEmpty()) return true // Both empty, considered identical
-    //     // Compare the first item's period as a quick check for new data
-    //     return old.result.history.first().period == new.result.history.first().period
-    // }
 
     // Place Bet using Repository
     suspend fun placeBet(
