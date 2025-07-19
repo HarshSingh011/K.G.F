@@ -108,7 +108,7 @@ fun GameHistoryDialogTigerAndDragon(onDismissRequest: () -> Unit) {
                 .fillMaxWidth(0.9f)
                 .fillMaxHeight(0.8f)
                 .background(Color.White, RoundedCornerShape(16.dp))
-                .padding(24.dp)
+                .padding(16.dp)
                 .verticalScroll(rememberScrollState()) // Make the entire dialog content scrollable
         ) {
             // Header with close button and tabs
@@ -136,7 +136,7 @@ fun GameHistoryDialogTigerAndDragon(onDismissRequest: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         // Adjusted padding to prevent overlap with close button
-                        .padding(start = 60.dp, end = 16.dp) // Increased start padding
+                        .padding(start = 80.dp, end = 16.dp) // Increased start padding
                 ) {
                     val totalWidth = maxWidth
                     val buttonCount = 2
