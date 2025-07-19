@@ -39,6 +39,7 @@ import com.weblite.kgf.ui.screens.game.GameHistoryDialogTigerAndDragon
 fun TigerAndDragonGameScreen(
     onShowTopBar: (Boolean) -> Unit,
     onShowBottomBar: (Boolean) -> Unit,
+    onBackClick: () -> Unit // Added new parameter for back navigation
 ) {
     var showTigerOverlay by remember { mutableStateOf(false) }
     var lastTimer by remember { mutableStateOf(3) }
@@ -121,7 +122,7 @@ fun TigerAndDragonGameScreen(
         ) {
             // Back button
             androidx.compose.material3.IconButton(
-                onClick = { /* TODO: Add navigation logic */ },
+                onClick = onBackClick, // Used the new onBackClick parameter
                 modifier = Modifier
                     .size(44.dp)
                     .background(Color(0xFF1B263B), shape = CircleShape)
@@ -405,7 +406,7 @@ fun TigerAndDragonGameScreen(
                         Modifier
                             .width(overlayWidth * 1.1f)
                             .wrapContentHeight()
-                            .align(Alignment.BottomStart)
+                            .align(Alignment.BottomEnd)
                             .padding(bottom = overlayHeight * 0.02f, start = overlayWidth * 0.38f)
                     )
                 }
@@ -598,14 +599,14 @@ fun TigerAndDragonGameScreen(
                         dragonVibe.animateTo(
                             targetValue = 18f,
                             animationSpec = tween(
-                                durationMillis = 300,
+                                durationMillis = 1000, // Increased duration for slower animation
                                 easing = LinearEasing
                             )
                         )
                         dragonVibe.animateTo(
                             targetValue = -18f,
                             animationSpec = tween(
-                                durationMillis = 300,
+                                durationMillis = 1000, // Increased duration for slower animation
                                 easing = LinearEasing
                             )
                         )
@@ -655,14 +656,14 @@ fun TigerAndDragonGameScreen(
                         tigerVibe.animateTo(
                             targetValue = -18f,
                             animationSpec = tween(
-                                durationMillis = 300,
+                                durationMillis = 1000, // Increased duration for slower animation
                                 easing = LinearEasing
                             )
                         )
                         tigerVibe.animateTo(
                             targetValue = 18f,
                             animationSpec = tween(
-                                durationMillis = 300,
+                                durationMillis = 1000, // Increased duration for slower animation
                                 easing = LinearEasing
                             )
                         )
@@ -757,6 +758,7 @@ fun UserChip(userName: String, amount: Double, avatarRes: Int, modifier: Modifie
 fun TigerAndDragonGameScreenPreview() {
     TigerAndDragonGameScreen(
         onShowTopBar = {},
-        onShowBottomBar = {}
+        onShowBottomBar = {},
+        onBackClick = {} // Provide a dummy lambda for preview
     )
 }

@@ -182,7 +182,8 @@ fun HomeScreen(
 
             TigerAndDragonGameScreen(
                 onShowTopBar = { onShowTopBar(it) },
-                onShowBottomBar = { onShowBottomBar(it) }
+                onShowBottomBar = { onShowBottomBar(it) },
+                onBackClick = { localNavController.popBackStack() } // Pass the back navigation action
             )
         }
 
