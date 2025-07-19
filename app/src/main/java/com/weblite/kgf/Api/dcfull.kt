@@ -656,6 +656,7 @@ data class BetResult(
     @SerializedName("created_at") val createdAt: String
 )
 
+
 // Wingo 30-second Game History API Models
 data class GameHistoryResponse(
     @SerializedName("status") val status: String,

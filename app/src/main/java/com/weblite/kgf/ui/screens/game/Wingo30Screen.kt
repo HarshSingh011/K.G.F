@@ -47,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,7 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.weblite.components.BettingPopupDialog
+import com.example.weblite.components.Wingo30BettingPopupDialog // Updated import
 import com.example.weblite.components.BigSmallButton
 import com.example.weblite.components.ColorButton
 import com.example.weblite.components.CompactExcelTableforWingo
@@ -78,6 +79,7 @@ import com.weblite.kgf.R
 import com.weblite.kgf.ui.screens.KGFLogoText
 import com.weblite.kgf.viewmodel.WingoGameViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -139,6 +141,7 @@ fun Wingo30Screen(
     var showSuccessMessage by remember { mutableStateOf(false) }
     var selectedColorForBetting by remember { mutableStateOf("Green") }
     var colorSelected by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     // Timer logic
     var secondsRemaining by remember { mutableIntStateOf(30) }
@@ -817,7 +820,7 @@ fun Wingo30Screen(
 
         // SHOW BETTING POPUP WHEN showBettingPopup IS TRUE
         if (showBettingPopup) {
-            BettingPopupDialog(
+            Wingo30BettingPopupDialog( // Changed to Wingo30BettingPopupDialog
                 selectedNumber = if (colorSelected) null else selectedNumberForBetting,
                 selectedColor = if (colorSelected) selectedColorForBetting else null,
                 onDismiss = {
@@ -825,12 +828,11 @@ fun Wingo30Screen(
                     colorSelected = false // Reset color selection flag
                 },
                 onConfirmBet = { number, color, amount, multiplier ->
-                    val betTotal = amount * multiplier
-                    totalBalance -= betTotal
+                    // The bet has already been placed successfully by the dialog's internal logic.
+                    // This callback is only for UI updates on the parent screen.
                     showSuccessMessage = true
                     colorSelected = false // Reset color selection flag
-                },
-                viewModel = viewModel
+                }
             )
         }
 

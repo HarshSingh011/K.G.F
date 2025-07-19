@@ -14,7 +14,6 @@ data class Wingo60PeriodIdResult(
     @SerializedName("update_at") val updateAt: String
 )
 
-
 data class GameHistory60SecResponse(
     val msg: String,
     val result: GameHistory60SecResult,
@@ -63,7 +62,7 @@ data class Wingo60SecMyHistory(
     val bidType: String,
     val big_small_result: String,
     val boost: String,
-    val calculated_totalAmount: Int,
+    val calculated_totalAmount: String?,
     val color_result: String,
     val created_at: String,
     val dateAdded: String,
@@ -74,7 +73,35 @@ data class Wingo60SecMyHistory(
     val resultStatus: String,
     val total: String,
     val userid: String,
-    val winning_amount: Int,
+    val winning_amount: String?,
     val winning_amount_bk: String
 )
 
+data class GameBet60Sec(
+    val agree: String,
+    val bidNum: String,
+    val bidType: String,
+    val boost: String,
+    val period: String,
+    val price: String,
+    val quantity: String,
+    val userid: String
+)
+
+data class Game60SecBettingResponse(
+    val msg: String,
+    val result: BetResult60Sec,
+    val status: String,
+    val status_code: Int
+)
+
+data class BetResult60Sec(
+    val bidNum: String,
+    val bidType: String,
+    val created_at: String,
+    val id: Int,
+    val period: String,
+    val price: String,
+    val quantity: String,
+    val userid: String
+)
