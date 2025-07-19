@@ -1,16 +1,16 @@
 package com.weblite.kgf.ui.screens.game
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,12 +28,12 @@ import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.ui.graphics.graphicsLayer
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.weblite.kgf.ui.components.HOMESCREEN
-import androidx.navigation.NavController
+import com.weblite.kgf.ui.screens.game.GameHistoryDialogTigerAndDragon
 
 @Composable
 fun TigerAndDragonGameScreen(
@@ -44,6 +44,7 @@ fun TigerAndDragonGameScreen(
     var lastTimer by remember { mutableStateOf(3) }
     var timerValue by remember { mutableStateOf(3) }
     var selectedChipIndex by remember { mutableStateOf(-1) }
+    var showHistoryDialog by remember { mutableStateOf(false) } // State to control dialog visibility
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     // Hide system status bar when this screen is shown
@@ -70,7 +71,7 @@ fun TigerAndDragonGameScreen(
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
-    
+
 
     // Simulate timer for preview/demo. Replace with your timer state in real app.
     LaunchedEffect(Unit) {
@@ -109,6 +110,46 @@ fun TigerAndDragonGameScreen(
                 )
             )
     ) {
+        // Top bar with back button (left) and history button (right)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 18.dp, start = 18.dp, end = 18.dp)
+                .zIndex(20f),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Back button
+            androidx.compose.material3.IconButton(
+                onClick = { /* TODO: Add navigation logic */ },
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(Color(0xFF1B263B), shape = CircleShape)
+                    .border(2.dp, Color(0xFFED6A5A), CircleShape)
+            ) {
+                androidx.compose.material3.Icon(
+                    painter = painterResource(id = R.drawable.backarrow),
+                    contentDescription = "Back",
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+            // History button (image)
+            androidx.compose.material3.IconButton(
+                onClick = { showHistoryDialog = true }, // MODIFIED: Open the dialog
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(Color(0xFF1B263B), shape = CircleShape)
+                    .border(2.dp, Color(0xFF43A047), CircleShape)
+            ) {
+                androidx.compose.material3.Icon(
+                    painter = painterResource(id = R.drawable.history),
+                    contentDescription = "History",
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        }
         // Main game area with lowest z-index
         BoxWithConstraints(
             modifier = Modifier
@@ -539,6 +580,7 @@ fun TigerAndDragonGameScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
+                .padding(top = 0.dp)
                 .zIndex(10f),
             contentAlignment = Alignment.TopCenter
         ) {
@@ -555,16 +597,16 @@ fun TigerAndDragonGameScreen(
                     while (true) {
                         dragonVibe.animateTo(
                             targetValue = 18f,
-                            animationSpec = androidx.compose.animation.core.tween(
+                            animationSpec = tween(
                                 durationMillis = 300,
-                                easing = androidx.compose.animation.core.LinearEasing
+                                easing = LinearEasing
                             )
                         )
                         dragonVibe.animateTo(
                             targetValue = -18f,
-                            animationSpec = androidx.compose.animation.core.tween(
+                            animationSpec = tween(
                                 durationMillis = 300,
-                                easing = androidx.compose.animation.core.LinearEasing
+                                easing = LinearEasing
                             )
                         )
                     }
@@ -578,17 +620,30 @@ fun TigerAndDragonGameScreen(
                 )
                 Spacer(modifier = Modifier.width(40.dp))
 
-                // Center timer (smaller)
+                // Redesigned timer box
                 Box(
                     modifier = Modifier
-                        .background(Color(0xFFD1B06B), RoundedCornerShape(16.dp))
-                        .padding(horizontal = 32.dp, vertical = 10.dp),
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF43A047), // Green top
+                                    Color(0xFFB3C7F7), // Blue middle
+                                    Color(0xFFED6A5A)  // Orange bottom
+                                )
+                            ),
+                            shape = RoundedCornerShape(24.dp)
+                        )
+                        .border(3.dp, Color(0xFF1B263B), RoundedCornerShape(24.dp))
+                        .shadow(10.dp, RoundedCornerShape(24.dp))
+                        .padding(horizontal = 38.dp, vertical = 18.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     androidx.compose.material3.Text(
                         text = timerValue.toString(),
-                        color = Color.Black,
-                        fontSize = 32.sp
+                        color = Color(0xFF1B263B),
+                        fontSize = 38.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        modifier = Modifier.align(Alignment.Center)
                     )
                 }
                 Spacer(modifier = Modifier.width(40.dp))
@@ -599,16 +654,16 @@ fun TigerAndDragonGameScreen(
                     while (true) {
                         tigerVibe.animateTo(
                             targetValue = -18f,
-                            animationSpec = androidx.compose.animation.core.tween(
+                            animationSpec = tween(
                                 durationMillis = 300,
-                                easing = androidx.compose.animation.core.LinearEasing
+                                easing = LinearEasing
                             )
                         )
                         tigerVibe.animateTo(
                             targetValue = 18f,
-                            animationSpec = androidx.compose.animation.core.tween(
+                            animationSpec = tween(
                                 durationMillis = 300,
-                                easing = androidx.compose.animation.core.LinearEasing
+                                easing = LinearEasing
                             )
                         )
                     }
@@ -638,6 +693,11 @@ fun TigerAndDragonGameScreen(
                     modifier = Modifier.size(220.dp)
                 )
             }
+        }
+
+        // MODIFIED: Conditionally display the GameHistoryDialogTigerAndDragon
+        if (showHistoryDialog) {
+            GameHistoryDialogTigerAndDragon(onDismissRequest = { showHistoryDialog = false })
         }
     }
 }
