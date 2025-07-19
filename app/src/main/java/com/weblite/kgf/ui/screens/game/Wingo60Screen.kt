@@ -31,6 +31,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +44,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,7 +58,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.weblite.components.BettingPopupDialog
+import com.example.weblite.components.Wingo60BettingPopupDialog // Updated import
 import com.example.weblite.components.BigSmallButton
 import com.example.weblite.components.ColorButton
 import com.example.weblite.components.CompactExcelTableforWingo
@@ -69,7 +71,9 @@ import com.weblite.kgf.ui.screens.KGFLogoText
 import com.weblite.kgf.R
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.weblite.kgf.Api2.Resource // Import the Resource sealed class
 import com.weblite.kgf.viewmodel.Wingo60GameViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,10 +88,9 @@ fun Wingo60Screen(
     var selectedColors by remember { mutableStateOf(setOf<String>()) }
     var selectedMultiplier by remember { mutableStateOf("Random") }
     var selectedBigSmall by remember { mutableStateOf("Big") }
-    var selectedHistoryTab by remember { mutableStateOf("Game History") }
     var showBettingPopup by remember { mutableStateOf(false) }
     var selectedNumberForBetting by remember { mutableStateOf(0) }
-    var totalBalance by remember { mutableStateOf(17510970.65) }
+    var totalBalance by remember { mutableStateOf(17510970.65) } // This should ideally come from a ViewModel or user session
     var showSuccessMessage by remember { mutableStateOf(false) }
     var selectedColorForBetting by remember { mutableStateOf("Green") }
     var colorSelected by remember { mutableStateOf(false) }
@@ -96,35 +99,66 @@ fun Wingo60Screen(
     val sixtySecPeriodId by viewModel.sixtySecPeriodId.collectAsStateWithLifecycle()
     val timeRemaining by viewModel.timeRemaining.collectAsStateWithLifecycle()
 
-    // Game History Data
-    val gameHistoryData = remember {
-        listOf(
-            listOf("2507021733", "Loading...", "Loading...", "Loading..."),
-            listOf("2507021732", "8", "RED", "BIG"),
-            listOf("2507021731", "1", "GREEN", "SMALL"),
-            listOf("2507021730", "0", "RED + VIOLET", "SMALL"),
-            listOf("2507021729", "6", "RED", "BIG"),
-            listOf("2507021728", "0", "RED + VIOLET", "SMALL"),
-            listOf("2507021727", "9", "GREEN", "BIG"),
-            listOf("2507021726", "1", "GREEN", "SMALL"),
-            listOf("2507021725", "8", "RED", "BIG"),
-            listOf("2507021724", "6", "RED", "BIG")
-        )
+    // Observe history data from ViewModel
+    val gameHistoryResource by viewModel.gameHistoryResponse.collectAsStateWithLifecycle()
+    val myHistoryResource by viewModel.myHistoryResponse.collectAsStateWithLifecycle()
+    val selectedHistoryTab by viewModel.selectedHistoryTab.collectAsStateWithLifecycle() // Observe selected tab
+
+    // Convert Game History API response to table data
+    val gameHistoryData = remember(gameHistoryResource) {
+        when (val resource = gameHistoryResource) {
+            is Resource.Loading -> listOf(
+                listOf("Loading...", "Loading...", "Loading...", "Loading...")
+            )
+            is Resource.Success -> {
+                resource.data?.result?.history?.map { historyItem ->
+                    listOf(
+                        historyItem.period_60,
+                        historyItem.number_result.ifEmpty { "Loading..." }, // Display "---" if empty
+                        historyItem.color_result.ifEmpty { "Loading..." },   // Display "---" if empty
+                        historyItem.big_small_result.ifEmpty { "Loading..." } // Display "---" if empty
+                    )
+                } ?: listOf(listOf("No Data", "No Data", "No Data", "No Data"))
+            }
+            is Resource.Error -> listOf(
+                listOf("Error", "Error", "Error", "Error")
+            )
+            null -> listOf(
+                listOf("Loading...", "Loading...", "Loading...", "Loading...")
+            )
+            else -> listOf(
+                listOf("Loading...", "Loading...", "Loading...", "Loading...", "Loading...")
+            )
+        }
     }
 
-    // My History Data
-    val myHistoryData = remember {
-        listOf(
-            listOf("2507022112", "3", "1", "Loss", "0"),
-            listOf("2507022111", "2", "1", "Loss", "0"),
-            listOf("2507021795", "7", "100", "Loss", "0"),
-            listOf("2507021795", "9", "100", "Loss", "0"),
-            listOf("2507021794", "7", "10", "Loss", "0"),
-            listOf("2507020968", "4", "1000", "Loss", "0"),
-            listOf("2506290186", "Red", "10", "Win", "19.60"),
-            listOf("2506290186", "Green", "10", "Loss", "0"),
-            listOf("2506290185", "Green", "10", "Loss", "0")
-        )
+    // Convert My History API response to table data
+    val myHistoryData = remember(myHistoryResource) {
+        when (val resource = myHistoryResource) {
+            is Resource.Loading -> listOf(
+                listOf("Loading...", "Loading...", "Loading...", "Loading...", "Loading...")
+            )
+            is Resource.Success -> {
+                resource.data?.result?.history?.map { historyItem ->
+                    listOf(
+                        historyItem.period,
+                        historyItem.bidNum,
+                        historyItem.price,
+                        historyItem.resultStatus,
+                        historyItem.winning_amount ?: "0" // Ensure winning_amount is not null
+                    )
+                } ?: listOf(listOf("No Data", "No Data", "No Data", "No Data", "No Data"))
+            }
+            is Resource.Error -> listOf(
+                listOf("Error", "Error", "Error", "Error", "Error")
+            )
+            null -> listOf(
+                listOf("Loading...", "Loading...", "Loading...", "Loading...", "Loading...")
+            )
+            else -> listOf(
+                listOf("Loading...", "Loading...", "Loading...", "Loading...", "Loading...")
+            )
+        }
     }
 
     val numberItems = remember {
@@ -142,7 +176,8 @@ fun Wingo60Screen(
         )
     }
 
-    val showCountdownOverlay = timeRemaining <= 5 && timeRemaining > 0
+    val showCountdownOverlay = timeRemaining <= 10 && timeRemaining > 0
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(showCountdownOverlay) {
         if (showCountdownOverlay && showBettingPopup) {
@@ -155,8 +190,8 @@ fun Wingo60Screen(
     LaunchedEffect(Unit) {
         onShowTopBar(false)
         onShowBottomBar(false)
-        // Ensure API is called and timer is updated when navigating to this page
-        viewModel.fetchPeriodIdAndStartTimer()
+        // ViewModel's init block already handles initial fetch and timer start.
+        // Also, the ViewModel's init block starts game history polling by default.
     }
 
     androidx.compose.material.Scaffold(
@@ -616,8 +651,7 @@ fun Wingo60Screen(
                         text = "Game History",
                         isSelected = selectedHistoryTab == "Game History",
                         onClick = {
-                            selectedHistoryTab = "Game History"
-                            viewModel.onGameHistoryTabSelected() // Start frequent polling
+                            viewModel.onGameHistoryTabSelected() // Let ViewModel manage state and polling
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -625,8 +659,7 @@ fun Wingo60Screen(
                         text = "My History",
                         isSelected = selectedHistoryTab == "My History",
                         onClick = {
-                            selectedHistoryTab = "My History"
-                            viewModel.onMyHistoryTabSelected() // Stop polling and fetch my history once
+                            viewModel.onMyHistoryTabSelected() // Let ViewModel manage state and one-time fetch
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -642,6 +675,12 @@ fun Wingo60Screen(
 
                     "My History" -> {
                         MyHistoryTableforWingo(data = myHistoryData)
+                    }
+                    // ADDED: This 'else' branch makes the 'when' expression exhaustive for String type
+                    else -> {
+                        // Fallback for any unexpected or unhandled selectedHistoryTab values
+                        // You might want to log this case or show a specific error UI
+                        CompactExcelTableforWingo(data = gameHistoryData) // Use gameHistoryData as a default fallback
                     }
                 }
             }
@@ -681,17 +720,25 @@ fun Wingo60Screen(
 
         // SHOW BETTING POPUP WHEN showBettingPopup IS TRUE
         if (showBettingPopup) {
-            BettingPopupDialog(
+            Wingo60BettingPopupDialog( // Changed to Wingo60BettingPopupDialog
                 selectedNumber = if (colorSelected) null else selectedNumberForBetting,
                 selectedColor = if (colorSelected) selectedColorForBetting else null,
                 onDismiss = {
                     showBettingPopup = false
                     colorSelected = false // Reset color selection flag
                 },
-                onConfirmBet = { number, color, amount, multiplier ->
-                    val betTotal = amount * multiplier
-                    totalBalance -= betTotal
-                    showSuccessMessage = true
+                // MODIFIED: onConfirmBet now receives the result from the dialog's internal bet placement
+                onConfirmBet = { isSuccess, errorMessage ->
+                    if (isSuccess) {
+                        // Update balance on success (consider moving this to ViewModel if balance is fetched from API)
+                        // Note: The amount and multiplier are not passed back here, so balance update needs to be handled differently
+                        // or fetched from API after bet.
+                        showSuccessMessage = true
+                    } else {
+                        // Handle error, e.g., show a toast or update an error state
+                        android.util.Log.e("Wingo60Screen", "Bet placement failed: $errorMessage")
+                        // You might want to show a SnackBar or Toast here for the user
+                    }
                     colorSelected = false // Reset color selection flag
                 }
             )

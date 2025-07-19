@@ -56,8 +56,6 @@ fun BettingPopupDialog(
 
     var selectInputField by remember { mutableStateOf(false) }
 
-    val periodId: String? = viewModel.currentPeriodValue
-
     val coroutineScope = rememberCoroutineScope()
 
     // Function to place bet

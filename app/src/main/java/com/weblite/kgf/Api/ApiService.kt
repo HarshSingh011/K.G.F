@@ -1,6 +1,8 @@
 package com.weblite.kgf.Api2
 
 import com.weblite.kgf.data.PeriodIdResponse
+import com.weblite.kgf.data.Wingo60SecDataClasses.Game60SecBettingResponse
+import com.weblite.kgf.data.Wingo60SecDataClasses.GameBet60Sec
 import com.weblite.kgf.data.Wingo60SecDataClasses.GameHistory60SecResponse
 import com.weblite.kgf.data.Wingo60SecDataClasses.Wingo60PeriodIdResponse // Import the new data class
 import com.weblite.kgf.data.Wingo60SecDataClasses.Wingo60SecMyHistoryResponse
@@ -70,4 +72,7 @@ interface ApiService {
 
     @GET("web/Api/wingo1MinMyHistory")
     suspend fun getWingo60SecMyHistory(@Query("user_id") userId: String): Response<Wingo60SecMyHistoryResponse>
+
+    @POST("web/Api/wingo1MinBet")
+    suspend fun place60SecBet(@Body request: GameBet60Sec): Response<Game60SecBettingResponse>
 }

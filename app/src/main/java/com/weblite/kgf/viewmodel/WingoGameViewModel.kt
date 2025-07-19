@@ -249,23 +249,4 @@ class WingoGameViewModel @Inject constructor(
             Result.failure(e)
         }
     }
-
-    // Refresh methods
-    fun refreshGameHistory() {
-        fetchGameHistory()
-    }
-
-    fun refreshMyHistory() {
-        fetchMyHistory()
-    }
-
-    // Debug methods
-    fun logCurrentInfo() {
-        val userId = SharedPrefManager.getString("user_id", "not_found")
-
-        Log.d("WingoGameVM", "====== CURRENT APP STATE ======")
-        Log.d("WingoGameVM", "User ID: $userId")
-        Log.d("WingoGameVM", "Timestamp: ${System.currentTimeMillis()}")
-        Log.d("WingoGameVM", "================================")
-    }
 }
