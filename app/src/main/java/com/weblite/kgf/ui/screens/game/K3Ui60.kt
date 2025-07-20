@@ -67,9 +67,17 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.weblite.components.CompactExcelTableforK3
 import com.example.weblite.components.HistoryTabButton
+import com.example.weblite.components.K360BettingPopupDialog
 import com.example.weblite.components.MyHistoryTableforK3
+import com.example.weblite.components.SuccessMessage
 import com.weblite.kgf.R
 import com.weblite.kgf.ui.screens.KGFLogoText
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.weblite.kgf.Api2.Resource
+import com.weblite.kgf.viewmodel.K360GameViewModel
+import com.weblite.kgf.ui.screens.game.getK3BallDrawable // Import from K3Common
+import com.weblite.kgf.utils.formatTimestamp // Import from K3GameUtils
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,24 +86,30 @@ fun K3Ui60(
     variant: String,
     onBack: () -> Unit,
     onShowTopBar: (Boolean) -> Unit,
-    onShowBottomBar: (Boolean) -> Unit
+    onShowBottomBar: (Boolean) -> Unit,
+    viewModel: K360GameViewModel = hiltViewModel()
 ) {
-    var selectedHistoryTab by remember { mutableStateOf("Game History") }
     var showBettingPopup by remember { mutableStateOf(false) }
     var selectedNumberForBetting by remember { mutableStateOf<Int?>(null) }
     var selectedBetTypeForBetting by remember { mutableStateOf<String?>(null) }
-    var totalBalance by remember { mutableStateOf(17436677.65) }
+    var totalBalance by remember { mutableStateOf(17436677.65) } // This should ideally come from a ViewModel or user session
     var showSuccessMessage by remember { mutableStateOf(false) }
-    var timeRemaining by remember { mutableStateOf(28) }
-    var currentPeriod by remember { mutableStateOf("2507031461") }
-    var timer by remember { mutableStateOf(60) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(1000L)
-            timer--
-            if (timer < 0) {
-                timer = 30 // Restart after reaching 0
-            }
+
+    val k3PeriodId by viewModel.k3PeriodId.collectAsStateWithLifecycle()
+    val timeRemaining by viewModel.k3TimeRemaining.collectAsStateWithLifecycle() // Use k3TimeRemaining
+
+    val gameHistoryResource by viewModel.k3GameHistory.collectAsStateWithLifecycle() // Use k3GameHistory
+    val myHistoryResource by viewModel.k3MyHistory.collectAsStateWithLifecycle() // Observe my history
+    val selectedHistoryTab by viewModel.activeHistoryTab.collectAsStateWithLifecycle() // Use activeHistoryTab
+
+    val showCountdownOverlay = timeRemaining <= 10000L && timeRemaining > 0L // 10 seconds in millis
+
+    LaunchedEffect(showCountdownOverlay) {
+        if (showCountdownOverlay && showBettingPopup) {
+            android.util.Log.d("K3Ui60", "Auto-closing betting dialog due to countdown overlay")
+            showBettingPopup = false
+            selectedNumberForBetting = null
+            selectedBetTypeForBetting = null
         }
     }
 
@@ -118,7 +132,6 @@ fun K3Ui60(
         K3Ball(18, "207.36X", Color(0xFF4CAF50))
     )
 
-    // Bet options (Big, Small, Odd, Even)
     val betOptions = listOf(
         K3BetOption("Big", "1.92X", Color(0xFFE53935)),
         K3BetOption("Small", "1.92X", Color(0xFF4CAF50)),
@@ -126,36 +139,62 @@ fun K3Ui60(
         K3BetOption("Even", "1.92X", Color(0xFF2196F3))
     )
 
-    // Game History Data for K3
-    val k3GameHistoryData = remember {
-        listOf(
-            listOf("2507031461", "Loading...", "Loading...", "Loading..."),
-            listOf("2507031460", "3", "Odd", "Small"),
-            listOf("2507031459", "8", "Even", "Small"),
-            listOf("2507031458", "13", "Odd", "Big"),
-            listOf("2507031457", "8", "Even", "Small"),
-            listOf("2507031456", "13", "Odd", "Big"),
-            listOf("2507031455", "5", "Odd", "Small"),
-            listOf("2507031454", "6", "Even", "Small"),
-            listOf("2507031453", "8", "Even", "Small"),
-            listOf("2507031452", "10", "Even", "Big")
-        )
+    val k3GameHistoryData = remember(gameHistoryResource) {
+        when (val resource = gameHistoryResource) {
+            is Resource.Loading -> listOf(
+                listOf("Loading...", "Loading...", "Loading...", "Loading...")
+            )
+            is Resource.Success -> {
+                resource.data?.mapIndexed { index, historyItem ->
+                    if (index == 0 && historyItem.number.isEmpty() && historyItem.oddEven.isEmpty() && historyItem.bigSmall.isEmpty()) {
+                        listOf(
+                            historyItem.datetime,
+                            "Loading...",
+                            "Loading...",
+                            "Loading..."
+                        )
+                    } else {
+                        listOf(
+                            historyItem.datetime, // Period ID
+                            historyItem.number, // Ball number
+                            historyItem.oddEven, // Only Odd/Even
+                            historyItem.bigSmall // Only Big/Small
+                        )
+                    }
+                } ?: listOf(listOf("No Data", "No Data", "No Data", "No Data"))
+            }
+            is Resource.Error -> listOf(
+                listOf("Error", "Error", "Error", "Error")
+            )
+            else -> listOf(
+                listOf("Loading...", "Loading...", "Loading...", "Loading...")
+            )
+        }
     }
 
-    // My History Data for K3
-    val k3MyHistoryData = remember {
-        listOf(
-            listOf("2506190211", "Small", "10000", "Loss", "0.00"),
-            listOf("2505261338", "Big", "10", "Loss", "0.00"),
-            listOf("2505220715", "Big", "1", "Loss", "0.00"),
-            listOf("2505220715", "Small", "1", "Win", "1.92"),
-            listOf("2505220715", "Odd", "1", "Win", "1.92"),
-            listOf("2505220715", "Even", "1", "Loss", "0.00"),
-            listOf("2505220714", "4", "1", "Loss", "0.00"),
-            listOf("2505220714", "3", "1", "Loss", "0.00"),
-            listOf("2505220714", "7", "1", "Loss", "0.00"),
-            listOf("2505220714", "8", "1", "Loss", "0.00")
-        )
+    val k3MyHistoryData = remember(myHistoryResource) {
+        when (val resource = myHistoryResource) {
+            is Resource.Loading -> listOf(
+                listOf("Loading...", "Loading...", "Loading...", "Loading...", "Loading...")
+            )
+            is Resource.Success -> {
+                resource.data?.map { historyItem ->
+                    listOf(
+                        historyItem.period,
+                        historyItem.bidNum,
+                        historyItem.price,
+                        historyItem.status, // Use 'status' for win/loss/pending
+                        historyItem.totalamount // Use 'totalamount' for winning amount
+                    )
+                } ?: listOf(listOf("No Data", "No Data", "No Data", "No Data", "No Data"))
+            }
+            is Resource.Error -> listOf(
+                listOf("Error", "Error", "Error", "Error", "Error")
+            )
+            else -> listOf(
+                listOf("Loading...", "Loading...", "Loading...", "Loading...", "Loading...")
+            )
+        }
     }
 
 
@@ -198,7 +237,7 @@ fun K3Ui60(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color.Black 
+                            tint = Color.Black
                         )
                     }
                 },
@@ -207,7 +246,6 @@ fun K3Ui60(
         }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
-            // screen content here
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -326,8 +364,9 @@ fun K3Ui60(
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Normal
                                     )
+                                    // Display fetched period ID
                                     Text(
-                                        text = currentPeriod,
+                                        text = k3PeriodId ?: "Loading...",
                                         color = Color.Black,
                                         fontSize = 18.sp,
                                         fontWeight = Bold
@@ -341,8 +380,9 @@ fun K3Ui60(
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Normal
                                     )
+                                    // Display fetched and calculated time remaining
                                     Text(
-                                        text = String.format("00:%02d", timeRemaining),
+                                        text = String.format("00:%02d", timeRemaining / 1000), // Convert millis to seconds
                                         color = Color(0xFFFF6B35),
                                         fontSize = 18.sp,
                                         fontWeight = Bold
@@ -357,16 +397,16 @@ fun K3Ui60(
                                     .fillMaxWidth()
                                     .height(110.dp)
                                     .background(
-                                        color = Color(0xFF39C780), // Outer bright green border
+                                        color = Color(0xFF39C780),
                                         shape = RoundedCornerShape(20.dp)
                                     )
-                                    .padding(8.dp) // Thickness of green border
+                                    .padding(8.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .background(
-                                            color = Color(0xFF2E7D32), // Dark green background inside
+                                            color = Color(0xFF2E7D32),
                                             shape = RoundedCornerShape(16.dp)
                                         )
                                         .padding(14.dp)
@@ -405,93 +445,143 @@ fun K3Ui60(
 
                 // COMBINED GAME SECTION - Balls and Bet Options
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(12.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(10.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                    Box {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            shape = RoundedCornerShape(12.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
                         ) {
-                            // K3 Balls Grid (3-18) - UPDATED TO USE BALL IMAGES
-                            LazyVerticalGrid(
-                                columns = GridCells.Fixed(4),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.height(330.dp),
-                                userScrollEnabled = false
+                            Column(
+                                modifier = Modifier.padding(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                items(k3Balls) { ball ->
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.clickable {
-                                            selectedNumberForBetting = ball.number
-                                            selectedBetTypeForBetting = null
-                                            showBettingPopup = true
+                                LazyVerticalGrid(
+                                    columns = GridCells.Fixed(4),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.height(330.dp),
+                                    userScrollEnabled = false
+                                ) {
+                                    items(k3Balls) { ball ->
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier.clickable {
+                                                if (!showCountdownOverlay) {
+                                                    selectedNumberForBetting = ball.number
+                                                    selectedBetTypeForBetting = null
+                                                    showBettingPopup = true
+                                                }
+                                            }
+                                        ) {
+                                            Image(
+                                                painter = painterResource(id = getK3BallDrawable(ball.number)),
+                                                contentDescription = "Ball ${ball.number}",
+                                                modifier = Modifier
+                                                    .size(45.dp)
+                                                    .clip(CircleShape),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = ball.multiplier,
+                                                fontSize = 15.sp,
+                                                fontWeight = Bold,
+                                                color = Color.Black
+                                            )
                                         }
-                                    ) {
-                                        // Use actual ball image instead of colored circle
-                                        Image(
-                                            painter = painterResource(id = getK3BallDrawable(ball.number)),
-                                            contentDescription = "Ball ${ball.number}",
+                                    }
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    betOptions.forEach { option ->
+                                        Column(
                                             modifier = Modifier
-                                                .size(45.dp)
-                                                .clip(CircleShape),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = ball.multiplier,
-                                            fontSize = 15.sp,
-                                            fontWeight = Bold,
-                                            color = Color.Black
-                                        )
+                                                .weight(1f)
+                                                .clickable {
+                                                    if (!showCountdownOverlay) {
+                                                        selectedNumberForBetting = null
+                                                        selectedBetTypeForBetting = option.name
+                                                        showBettingPopup = true
+                                                    }
+                                                },
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .background(
+                                                        option.backgroundColor,
+                                                        RoundedCornerShape(8.dp)
+                                                    ),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                    Text(
+                                                        text = option.name,
+                                                        color = Color.White,
+                                                        fontWeight = Bold,
+                                                        fontSize = 16.sp
+                                                    )
+                                                    Text(
+                                                        text = option.multiplier,
+                                                        color = Color.White,
+                                                        fontSize = 12.sp
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
+                        }
 
-                            // Big/Small/Odd/Even Selection
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        if (showCountdownOverlay) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                betOptions.forEach { option ->
-                                    Column(
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(vertical = 80.dp)
+                                ) {
+                                    Box(
                                         modifier = Modifier
-                                            .weight(1f)
-                                            .clickable {
-                                                selectedNumberForBetting = null
-                                                selectedBetTypeForBetting = option.name
-                                                showBettingPopup = true
-                                            },
-                                        horizontalAlignment = Alignment.CenterHorizontally
+                                            .background(Color.White, RoundedCornerShape(12.dp))
+                                            .padding(horizontal = 20.dp, vertical = 16.dp)
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-//                                            .height(60.dp)
-                                                .background(
-                                                    option.backgroundColor,
-                                                    RoundedCornerShape(8.dp)
-                                                ),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Text(
-                                                    text = option.name,
-                                                    color = Color.White,
-                                                    fontWeight = Bold,
-                                                    fontSize = 16.sp
-                                                )
-                                                Text(
-                                                    text = option.multiplier,
-                                                    color = Color.White,
-                                                    fontSize = 12.sp
-                                                )
-                                            }
-                                        }
+                                        Text(
+                                            text = "0",
+                                            color = Color(0xFFFF6B35),
+                                            fontSize = 32.sp,
+                                            fontWeight = Bold
+                                        )
+                                    }
+
+                                    Text(
+                                        text = ":",
+                                        color = Color.White,
+                                        fontSize = 32.sp,
+                                        fontWeight = Bold
+                                    )
+
+                                    Box(
+                                        modifier = Modifier
+                                            .background(Color.White, RoundedCornerShape(12.dp))
+                                            .padding(horizontal = 20.dp, vertical = 16.dp)
+                                    ) {
+                                        Text(
+                                            text = (timeRemaining / 1000).toString(), // Convert millis to seconds
+                                            color = Color(0xFFFF6B35),
+                                            fontSize = 32.sp,
+                                            fontWeight = Bold
+                                        )
                                     }
                                 }
                             }
@@ -508,13 +598,13 @@ fun K3Ui60(
                         HistoryTabButton(
                             text = "Game History",
                             isSelected = selectedHistoryTab == "Game History",
-                            onClick = { selectedHistoryTab = "Game History" },
+                            onClick = { viewModel.setActiveHistoryTab("Game History") }, // Use setActiveHistoryTab
                             modifier = Modifier.weight(1f)
                         )
                         HistoryTabButton(
                             text = "My History",
                             isSelected = selectedHistoryTab == "My History",
-                            onClick = { selectedHistoryTab = "My History" },
+                            onClick = { viewModel.setActiveHistoryTab("My History") }, // Use setActiveHistoryTab
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -566,123 +656,35 @@ fun K3Ui60(
                 }
             }
         }
-    }
 
-}
-
-@Composable
-fun ResultTableUI() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.White)
-            .padding(4.dp)
-    ) {
-        // Header Row
-        Row(modifier = Modifier.fillMaxWidth()) {
-            TableHeaderCell("Period", Modifier.weight(1f))
-            TableHeaderCell("Number", Modifier.weight(1f))
-            TableHeaderCell("Odd/Even", Modifier.weight(1f))
-            TableHeaderCell("Big/Small", Modifier.weight(1f))
+        if (showBettingPopup) {
+            K360BettingPopupDialog(
+                selectedNumber = selectedNumberForBetting,
+                selectedBetType = selectedBetTypeForBetting,
+                k3PeriodId = k3PeriodId,
+                onDismiss = {
+                    showBettingPopup = false
+                    selectedNumberForBetting = null
+                    selectedBetTypeForBetting = null
+                },
+                onConfirmBet = { isSuccess, errorMessage ->
+                    if (isSuccess) {
+                        showSuccessMessage = true
+                        // Refresh My History after a successful bet
+                        viewModel.fetchK3MyHistory()
+                    } else {
+                        android.util.Log.e("K3Ui60", "Bet placement failed: $errorMessage")
+                    }
+                }
+            )
         }
 
-        val data = listOf(
-            listOf("2506221458", "Loading", "Loading", "Loading"),
-            listOf("2506221457", "6", "Even", "Small"),
-            listOf("2506221456", "9", "Odd", "Small"),
-            listOf("2506221455", "12", "Even", "Big"),
-            listOf("2506221454", "3", "Odd", "Small"),
-            listOf("2506221453", "8", "Even", "Small"),
-            listOf("2506221452", "15", "Odd", "Big"),
-            listOf("2506221451", "2", "Even", "Small"),
-            listOf("2506221450", "7", "Odd", "Small")
-        )
-
-        // Data Rows
-        data.forEach { (period, number, oddEven, bigSmall) ->
-            Row(modifier = Modifier.fillMaxWidth()) {
-                // Period cell (default color)
-                val periodColor = Color(0xfffb630c)
-                TableDataCell(period, Modifier.weight(1f),textColor = periodColor)
-
-                // Number cell - color based on odd/even
-                val numberColor = when {
-                    number == "Loading" -> Color(0xfffb630c)
-                    number.toIntOrNull()?.let { it % 2 == 0 } == true -> Color(0xFF1ec825) // Even
-                    else -> Color(0xfffe0000)
-                }
-                TableDataCell(number, Modifier.weight(1f), textColor = numberColor)
-
-                // Odd/Even cell
-                val oddEvenColor = when (oddEven) {
-                    "Even" -> Color(0xff0195ff)
-                    "Odd" -> Color(0xFFffc300)
-                    else -> Color(0xfffb630c)
-                }
-                TableDataCell(oddEven, Modifier.weight(1f), textColor = oddEvenColor)
-
-                // Big/Small cell
-                val bigSmallColor = when (bigSmall) {
-                    "Big" -> Color(0xfffe0000)
-                    "Small" -> Color(0xFF1ec825) // Green
-                    else -> Color(0xfffb630c)
-                }
-                TableDataCell(bigSmall, Modifier.weight(1f), textColor = bigSmallColor)
-            }
+        if (showSuccessMessage) {
+            SuccessMessage(
+                message = "K3 bet saved successfully.",
+                isVisible = showSuccessMessage,
+                onDismiss = { showSuccessMessage = false }
+            )
         }
     }
-}
-
-@Composable
-fun TableHeaderCell(text: String, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .border(1.dp, Color.LightGray)
-            .background(Color(0xFF4CAF50))
-            .padding(8.dp)
-    ) {
-        Text(
-            text = text,
-            color = Color.White,
-            fontWeight = Bold,
-            fontSize = 14.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
-}
-
-@Composable
-fun TableDataCell(
-    text: String,
-    modifier: Modifier = Modifier,
-    textColor: Color = Color.Black // Default color
-) {
-    Box(
-        modifier = modifier
-            .border(1.dp, Color.LightGray)
-            .background(Color.White)
-            .padding(8.dp)
-    ) {
-        Text(
-            text = text,
-            color = textColor,
-            fontSize = 13.sp,
-            lineHeight = 14.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
-}
-@Preview(showSystemUi = true)
-@Composable
-fun GameUIPreview() {
-//    val navController = rememberNavController()
-//    K3Ui60(
-//        variant = "",
-//        onBack = { navController.popBackStack() },
-//        onShowTopBar = {}, // or { show -> /* handle preview logic */ }
-//        onShowBottomBar = {} // same here
-//    )
-    ResultTableUI()
 }

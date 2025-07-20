@@ -1,13 +1,15 @@
 package com.weblite.kgf.Api2
 
-import com.weblite.kgf.data.K360DataClassses.GameBetK3
-import com.weblite.kgf.data.K360DataClassses.GameK3BettingResponse
-import com.weblite.kgf.data.K360DataClassses.K3PeriodIdResponse
+import com.weblite.kgf.data.GameBetK360
+import com.weblite.kgf.data.GameK360BettingResponse
 import com.weblite.kgf.data.PeriodIdResponse
+import com.weblite.kgf.data.K360GameHistoryResponse
+import com.weblite.kgf.data.K360MyHistoryResponse
+import com.weblite.kgf.data.K360PeriodIdResponse
 import com.weblite.kgf.data.Wingo60SecDataClasses.Game60SecBettingResponse
 import com.weblite.kgf.data.Wingo60SecDataClasses.GameBet60Sec
 import com.weblite.kgf.data.Wingo60SecDataClasses.GameHistory60SecResponse
-import com.weblite.kgf.data.Wingo60SecDataClasses.Wingo60PeriodIdResponse // Import the new data class
+import com.weblite.kgf.data.Wingo60SecDataClasses.Wingo60PeriodIdResponse
 import com.weblite.kgf.data.Wingo60SecDataClasses.Wingo60SecMyHistoryResponse
 import retrofit2.Response
 import retrofit2.http.Body
@@ -54,7 +56,7 @@ interface ApiService {
     // Wingo 30-second game APIs
 
     @GET("web/Api/wingo30SecPeriodID")
-    suspend fun getThirtySecondPeriodID(): Response<PeriodIdResponse>
+    suspend fun getThirtySecondPeriodID() : Response<PeriodIdResponse>
 
     @POST("web/Api/wingo30SecBet")
     suspend fun placeBet(@Body request: BetRequest): Response<BetResponse>
@@ -67,8 +69,8 @@ interface ApiService {
 
     // Wingo 60-second game APIs
 
-    @GET("web/Api/wingo1MinPeriodID") // New API endpoint for 60-second game
-    suspend fun getSixtySecondPeriodID(@Query("user_id") userId: String?): Response<Wingo60PeriodIdResponse>
+    @GET("web/Api/wingo1MinPeriodID")
+    suspend fun getSixtySecondPeriodID(@Query("user_id") userId: String?) : Response<Wingo60PeriodIdResponse>
 
     @GET("web/Api/Wing1MinGameHistory")
     suspend fun getWingo60SecGameHistory(): Response<GameHistory60SecResponse>
@@ -80,19 +82,18 @@ interface ApiService {
     suspend fun place60SecBet(@Body request: GameBet60Sec): Response<Game60SecBettingResponse>
 
     // K3 1-minute game APIs
-    @GET("web/Api/k31MinperiodID") // New API endpoint for K3 1-minute game
-    suspend fun getK3OneMinPeriodID(@Query("user_id") userId: String?): Response<K3PeriodIdResponse>
+    @GET("web/Api/k31MinperiodID")
+    suspend fun getK3O60neMinPeriodID(@Query("user_id") userId: String?): Response<K360PeriodIdResponse>
 
-    @POST("web/Api/k31MinBet") // Assuming this endpoint for K3 betting
-    suspend fun placeK3Bet(@Body request: GameBetK3): Response<GameK3BettingResponse>
+    @POST("web/Api/k3_1MinBet") // FIXED: Added underscore here!
+    suspend fun placeK360Bet(@Body request: GameBetK360): Response<GameK360BettingResponse>
+
+    // K3 Game History API
+    @GET("web/Api/GameHistoryK31Min")
+    suspend fun getK360GameHistory(): Response<K360GameHistoryResponse>
+
+    // Add K3 my history APIs here if available
+    @GET("web/Api/k3_1MinMyHistory")
+    suspend fun getK360MyHistory(@Query("user_id") userId: String): Response<K360MyHistoryResponse>
 
 }
-// Add K3 history APIs here if available
-/*
-@GET("web/Api/k31MinGameHistory")
-suspend fun getK3GameHistory(): Response<K3GameHistoryResponse>
-
-@GET("web/Api/k31MinMyHistory")
-suspend fun getK3MyHistory(@Query("user_id") userId: String): Response<K3MyHistoryResponse>
-}
-*/
