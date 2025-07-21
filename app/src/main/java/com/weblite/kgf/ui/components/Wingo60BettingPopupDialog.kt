@@ -1,5 +1,7 @@
 package com.example.weblite.components
 
+
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,9 +37,8 @@ fun Wingo60BettingPopupDialog(
     selectedNumber: Int? = null,
     selectedColor: String? = null,
     onDismiss: () -> Unit,
-    // MODIFIED: onConfirmBet now signals success/failure back to the parent
-    onConfirmBet: (Boolean, String?) -> Unit, // (isSuccess, errorMessage)
-    viewModel: Wingo60GameViewModel = hiltViewModel() // Changed ViewModel
+    onConfirmBet: (Int?, String?, Int, Int) -> Unit, // (number, color, amount, multiplier)
+    viewModel: Wingo60GameViewModel? = null
 ) {
     // Log the initial values received by the dialog
     android.util.Log.d("Wingo60BettingPopupDialog", "Dialog initialized with:")
@@ -65,48 +66,31 @@ fun Wingo60BettingPopupDialog(
         errorMessage = null
 
         try {
-            // Determine bidNum and bidType correctly
             val (bidNum, bidType) = when {
-                selectedNumber != null -> {
-                    // User selected a number (0-9)
-                    Pair(selectedNumber.toString(), "number")
-                }
-                selectedColor != null -> {
-                    // User selected a color (Green, Red, Violet, Big, Small)
-                    // Assuming Big/Small are treated as 'color' type bets by the API
-                    Pair(selectedColor, "color")
-                }
-                else -> {
-                    // This case should ideally not be reached if UI ensures one is selected
-                    errorMessage = "No number or color selected."
-                    onConfirmBet(false, errorMessage) // Signal failure to parent
-                    return
-                }
+                selectedNumber != null -> Pair(selectedNumber.toString(), "number")
+                selectedColor != null -> Pair(selectedColor, "color")
+                else -> Pair("", "number")
             }
 
-            // Log the betting details for debugging
             android.util.Log.d("Wingo60BettingPopupDialog", "Placing bet - bidNum: $bidNum, bidType: $bidType")
             android.util.Log.d("Wingo60BettingPopupDialog", "selectedNumber: $selectedNumber, selectedColor: $selectedColor")
-            android.util.Log.d("Wingo60BettingPopupDialog", "Sending to API: quantity='1', price='$totalAmount'") // Added log for price and quantity
 
-            val result = viewModel.placeBet( // Using Wingo60GameViewModel's placeBet
+            val result = viewModel?.placeBet(
                 bidNum = bidNum,
                 bidType = bidType,
-                quantity = multiplierValue.toString(), // Quantity is fixed to "1" as per current logic
-                price = totalAmount.toString() // Price is the total amount (baseAmount * multiplier)
-            )
+                quantity = "1",
+                price = totalAmount.toString()
+            ) ?: Result.success("Preview")
 
             if (result.isSuccess) {
-                // Bet was successful
-                onConfirmBet(true, null) // Signal success to parent
-                onDismiss() // Dismiss the dialog
+                onConfirmBet(selectedNumber, selectedColor, baseAmount, multiplierValue)
+                onDismiss()
             } else {
                 errorMessage = result.exceptionOrNull()?.message ?: "Bet placement failed"
-                onConfirmBet(false, errorMessage) // Signal failure to parent
+                // No error callback, just show error
             }
         } catch (e: Exception) {
             errorMessage = e.message ?: "An error occurred"
-            onConfirmBet(false, errorMessage) // Signal failure to parent
         } finally {
             isLoading = false
         }
@@ -455,3 +439,18 @@ fun Wingo60BettingPopupDialog(
     }
 }
 
+
+
+@Preview(showBackground = true)
+@Composable
+fun Wingo60BettingPopupDialogPreview() {
+    MaterialTheme {
+        Wingo60BettingPopupDialog(
+            selectedNumber = 5,
+            selectedColor = null,
+            onDismiss = {},
+            onConfirmBet = { _, _, _, _ -> },
+            viewModel = null // Pass null for preview
+        )
+    }
+}

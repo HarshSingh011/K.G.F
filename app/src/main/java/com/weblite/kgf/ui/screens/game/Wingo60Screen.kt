@@ -720,25 +720,17 @@ fun Wingo60Screen(
 
         // SHOW BETTING POPUP WHEN showBettingPopup IS TRUE
         if (showBettingPopup) {
-            Wingo60BettingPopupDialog( // Changed to Wingo60BettingPopupDialog
+            Wingo60BettingPopupDialog(
                 selectedNumber = if (colorSelected) null else selectedNumberForBetting,
                 selectedColor = if (colorSelected) selectedColorForBetting else null,
                 onDismiss = {
                     showBettingPopup = false
                     colorSelected = false // Reset color selection flag
                 },
-                // MODIFIED: onConfirmBet now receives the result from the dialog's internal bet placement
-                onConfirmBet = { isSuccess, errorMessage ->
-                    if (isSuccess) {
-                        // Update balance on success (consider moving this to ViewModel if balance is fetched from API)
-                        // Note: The amount and multiplier are not passed back here, so balance update needs to be handled differently
-                        // or fetched from API after bet.
-                        showSuccessMessage = true
-                    } else {
-                        // Handle error, e.g., show a toast or update an error state
-                        android.util.Log.e("Wingo60Screen", "Bet placement failed: $errorMessage")
-                        // You might want to show a SnackBar or Toast here for the user
-                    }
+                onConfirmBet = { number, color, amount, multiplier ->
+                    // The bet has already been placed successfully by the dialog's internal logic.
+                    // This callback is only for UI updates on the parent screen.
+                    showSuccessMessage = true
                     colorSelected = false // Reset color selection flag
                 }
             )

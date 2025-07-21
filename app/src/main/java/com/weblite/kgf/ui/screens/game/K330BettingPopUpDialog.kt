@@ -1,4 +1,4 @@
-package com.example.weblite.components
+package com.weblite.kgf.ui.screens.game
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,28 +21,27 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.weblite.kgf.ui.screens.game.getNumberBackgroundColor
-import com.weblite.kgf.viewmodel.WingoGameViewModel
+import com.weblite.kgf.viewmodel.K330BettingViewModel // Use K330BettingViewModel
 import kotlinx.coroutines.launch
 
 @Composable
-fun Wingo30BettingPopupDialog(
+fun K330BettingPopupDialog(
     selectedNumber: Int? = null,
-    selectedColor: String? = null,
+    selectedBetType: String? = null,
+    k3PeriodId: String?,
     onDismiss: () -> Unit,
-    onConfirmBet: (Int?, String?, Int, Int) -> Unit, // (number, color, amount, multiplier)
-    viewModel: WingoGameViewModel? = null
+    onBetConfirmed: (Boolean, String?) -> Unit,
+    viewModel: K330BettingViewModel = hiltViewModel() // Use K330BettingViewModel
 ) {
-    // Log the initial values received by the dialog
-    android.util.Log.d("Wingo30BettingPopupDialog", "Dialog initialized with:")
-    android.util.Log.d("Wingo30BettingPopupDialog", "- selectedNumber: $selectedNumber")
-    android.util.Log.d("Wingo30BettingPopupDialog", "- selectedColor: $selectedColor")
+    android.util.Log.d("K330BettingPopupDialog", "Dialog initialized with:")
+    android.util.Log.d("K330BettingPopupDialog", "- selectedNumber: $selectedNumber")
+    android.util.Log.d("K330BettingPopupDialog", "- selectedBetType: $selectedBetType")
+    android.util.Log.d("K330BettingPopupDialog", "- k3PeriodId: $k3PeriodId")
 
     var selectedBalance by remember { mutableStateOf(1) }
     var betAmount by remember { mutableStateOf("1") }
@@ -53,104 +52,79 @@ fun Wingo30BettingPopupDialog(
 
     val baseAmount = betAmount.toIntOrNull() ?: 1
     val multiplierValue = selectedMultiplier.removePrefix("X").toIntOrNull() ?: 1
-    val totalAmount = baseAmount * multiplierValue
+    val totalAmount = (baseAmount * multiplierValue).toDouble()
 
     var selectInputField by remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
 
-    // Function to place bet
     suspend fun placeBet() {
         isLoading = true
         errorMessage = null
 
         try {
-            // Determine bidNum and bidType correctly
             val (bidNum, bidType) = when {
-                selectedNumber != null -> {
-                    // User selected a number (0-9)
-                    Pair(selectedNumber.toString(), "number")
-                }
-                selectedColor != null -> {
-                    // User selected a color (Green, Red, Violet, Big, Small)
-                    Pair(selectedColor, "color") // Big/Small are also treated as 'color' type bets
-                }
+                selectedNumber != null -> Pair(selectedNumber.toString(), "number")
+                selectedBetType != null -> Pair(selectedBetType, "type")
                 else -> {
-                    // Fallback case
-                    Pair("", "number")
+                    errorMessage = "No number or bet type selected."
+                    onBetConfirmed(false, errorMessage)
+                    return
                 }
             }
 
-            // Log the betting details for debugging
-            android.util.Log.d("Wingo30BettingPopupDialog", "Placing bet - bidNum: $bidNum, bidType: $bidType")
-            android.util.Log.d("Wingo30BettingPopupDialog", "selectedNumber: $selectedNumber, selectedColor: $selectedColor")
+            val currentPeriod = k3PeriodId ?: "UNKNOWN_PERIOD"
 
-            val result = viewModel?.placeBet(
+            android.util.Log.d("K330BettingPopupDialog", "Placing K3 bet - bidNum: $bidNum, bidType: $bidType, period: $currentPeriod")
+            android.util.Log.d("K330BettingPopupDialog", "Sending to API: quantity='${multiplierValue}', price='${totalAmount}'")
+
+            val result = viewModel.placeBet(
                 bidNum = bidNum,
                 bidType = bidType,
-                quantity = "1",
+                period = currentPeriod,
+                quantity = multiplierValue.toString(),
                 price = totalAmount.toString()
-            ) ?: Result.success("Preview")
+            )
 
             if (result.isSuccess) {
-                onConfirmBet(selectedNumber, selectedColor, baseAmount, multiplierValue)
+                onBetConfirmed(true, null)
                 onDismiss()
             } else {
                 errorMessage = result.exceptionOrNull()?.message ?: "Bet placement failed"
+                onBetConfirmed(false, errorMessage)
             }
-
         } catch (e: Exception) {
             errorMessage = e.message ?: "An error occurred"
+            onBetConfirmed(false, errorMessage)
         } finally {
             isLoading = false
         }
     }
 
-    // Updated color logic for K3 balls and bet options
     val (topColor, bottomColor) = when {
-        // K3 Ball colors (3-18) - matching the K3Ball data class colors
-        selectedNumber == 3 -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
-        selectedNumber == 4 -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
-        selectedNumber == 5 -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
-        selectedNumber == 6 -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
-        selectedNumber == 7 -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
-        selectedNumber == 8 -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
-        selectedNumber == 9 -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
-        selectedNumber == 10 -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
-        selectedNumber == 11 -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
-        selectedNumber == 12 -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
-        selectedNumber == 13 -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
-        selectedNumber == 14 -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
-        selectedNumber == 15 -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
-        selectedNumber == 16 -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
-        selectedNumber == 17 -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
-        selectedNumber == 18 -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
-
-        // Bet option colors - matching the K3BetOption data class colors
-        selectedColor == "Big" -> Pair(Color(0xFFFFC107), Color(0xFFFFC107)) // Yellow for Big
-        selectedColor == "Small" -> Pair(Color(0xFF2196F3), Color(0xFF2196F3)) // Blue for Small
-        selectedColor == "Odd" -> Pair(Color(0xFFFFC107), Color(0xFFFFC107)) // Yellow
-        selectedColor == "Even" -> Pair(Color(0xFF2196F3), Color(0xFF2196F3)) // Blue
-
-        // Keep original logic for Win Go numbers (0, 5) if needed
-        selectedNumber == 0 -> Pair(Color(0xFFE53935), Color(0xFF9C27B0)) // Red + Violet (for 0)
-        selectedNumber == 5 -> Pair(Color(0xFF4CAF50), Color(0xFF9C27B0)) // Green + Violet (for 5)
         selectedNumber != null -> {
-            val singleColor = getNumberBackgroundColor(selectedNumber)
-            Pair(singleColor, singleColor)
+            when (selectedNumber) {
+                in 3..18 -> {
+                    val isRed = listOf(3, 5, 7, 9, 11, 13, 15, 17).contains(selectedNumber)
+                    if (isRed) Pair(Color(0xFFE53935), Color(0xFFE53935))
+                    else Pair(Color(0xFF4CAF50), Color(0xFF4CAF50))
+                }
+                else -> Pair(Color(0xFFFF6B35), Color(0xFFFF6B35))
+            }
         }
-        selectedColor == "Green" -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50))
-        selectedColor == "Violet" -> Pair(Color(0xFF9C27B0), Color(0xFF9C27B0))
-        selectedColor == "Red" -> Pair(Color(0xFFE53935), Color(0xFFE53935))
-
-        // Default fallback
+        selectedBetType != null -> {
+            when (selectedBetType) {
+                "Big", "Odd" -> Pair(Color(0xFFFFC107), Color(0xFFFFC107))
+                "Small", "Even" -> Pair(Color(0xFF2196F3), Color(0xFF2196F3))
+                else -> Pair(Color(0xFFFF6B35), Color(0xFFFF6B35))
+            }
+        }
         else -> Pair(Color(0xFFFF6B35), Color(0xFFFF6B35))
     }
 
-    // Update display text for K3
     val displayText = when {
         selectedNumber != null -> "Select $selectedNumber"
-        selectedColor != null -> "Select $selectedColor"
+        selectedBetType != null -> "Select $selectedBetType"
         else -> "Select"
     }
 
@@ -162,92 +136,84 @@ fun Wingo30BettingPopupDialog(
             usePlatformDefaultWidth = false
         )
     ) {
-        // Semi-transparent background overlay
         Box(
             modifier = Modifier.fillMaxSize().padding(bottom = 90.dp),
             contentAlignment = if (selectInputField) Alignment.Center else Alignment.BottomEnd
         ) {
-            // Dialog content positioned at bottom
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState())
                     .background(Color.White, RectangleShape)
             ) {
-                // Header Section with Split Colors - REDUCED HEIGHT
                 Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Top Row - "Win Go 30s" with first color - REDUCED HEIGHT
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(35.dp) // Reduced from 50dp to 35dp
+                            .height(35.dp)
                             .background(topColor),
                         contentAlignment = Alignment.Center
                     ) {
-                        // Close button at top right
                         IconButton(
                             onClick = onDismiss,
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
-                                .size(32.dp) // Reduced size
+                                .size(32.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Close",
                                 tint = Color.White,
-                                modifier = Modifier.size(20.dp) // Reduced size
+                                modifier = Modifier.size(20.dp)
                             )
                         }
 
-                        // Center text - Updated for Win Go
                         Text(
-                            text = "Win Go 30s", // Updated text
-                            color = Color.White, // Changed to white for better visibility
-                            fontSize = 16.sp, // Reduced from 20sp
+                            text = "K3 Lotre 30sec",
+                            color = Color.White,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
 
-                    // Bottom Row - "Select [number]" with second color - REDUCED HEIGHT
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(35.dp) // Reduced from 50dp to 35dp
+                            .height(35.dp)
                             .background(bottomColor),
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
-                                .background(Color.White, RoundedCornerShape(6.dp)) // Reduced corner radius
-                                .padding(horizontal = 16.dp, vertical = 4.dp) // Reduced padding
+                                .background(Color.White, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
                         ) {
                             Text(
                                 text = displayText,
                                 color = Color.Black,
-                                fontSize = 14.sp, // Reduced from 18sp
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
                 }
 
-                // Balance Selection - REDUCED SPACING
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 6.dp), // Reduced padding
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = "Balance",
                         color = Color.Black,
-                        fontSize = 16.sp, // Reduced from 18sp
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
 
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp), // Reduced spacing
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         listOf(1, 10, 100, 1000).forEach { balance ->
@@ -256,36 +222,35 @@ fun Wingo30BettingPopupDialog(
                                     selectedBalance = balance
                                     betAmount = balance.toString()
                                 },
-                                shape = RoundedCornerShape(10.dp), // Reduced corner radius
+                                shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (selectedBalance == balance) Color(0xFFFF6B35) else Color(0xFFE0E0E0),
                                     contentColor = if (selectedBalance == balance) Color.White else Color(0xFFFF6B35)
                                 ),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp), // Reduced padding
-                                modifier = Modifier.height(32.dp) // Reduced height
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier.height(32.dp)
                             ) {
                                 Text(
                                     text = balance.toString(),
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp // Reduced font size
+                                    fontSize = 12.sp
                                 )
                             }
                         }
                     }
                 }
 
-                // Bet Amount Input - REDUCED SPACING
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp), // Reduced padding
+                        .padding(horizontal = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = "Bet Amount",
                         color = Color.Black,
-                        fontSize = 16.sp, // Reduced from 18sp
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
 
@@ -296,10 +261,10 @@ fun Wingo30BettingPopupDialog(
                             betAmount = it
                         },
                         modifier = Modifier
-                            .height(50.dp) // Reduced from 50dp
-                            .padding(start = 12.dp), // Reduced padding
+                            .height(50.dp)
+                            .padding(start = 12.dp),
                         textStyle = LocalTextStyle.current.copy(
-                            fontSize = 13.sp, // Reduced font size
+                            fontSize = 13.sp,
                             color = Color.Black
                         ),
                         singleLine = true,
@@ -310,16 +275,15 @@ fun Wingo30BettingPopupDialog(
                             focusedTextColor = Color.Black,
                             unfocusedTextColor = Color.Black
                         ),
-                        shape = RoundedCornerShape(5.dp) // Reduced corner radius
+                        shape = RoundedCornerShape(5.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(6.dp)) // Reduced spacing
+                Spacer(modifier = Modifier.height(6.dp))
 
-                // Multiplier Selection - REDUCED SPACING
                 LazyRow(
-                    modifier = Modifier.padding(horizontal = 6.dp), // Reduced padding
-                    horizontalArrangement = Arrangement.spacedBy(3.dp) // Reduced spacing
+                    modifier = Modifier.padding(horizontal = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     items(listOf("X1", "X5", "X10", "X20", "X50", "X100")) { multiplier ->
                         MultiplierPopupButton(
@@ -327,28 +291,25 @@ fun Wingo30BettingPopupDialog(
                             isSelected = selectedMultiplier == multiplier,
                             onClick = {
                                 selectedMultiplier = multiplier
-                                // Only update the multiplier, don't change betAmount
-                                // Total amount will automatically recalculate
                             }
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp)) // Reduced spacing
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Agreement Checkbox - REDUCED SPACING
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .padding(horizontal = 12.dp) // Reduced padding
+                        .padding(horizontal = 12.dp)
                         .clickable { isAgreed = !isAgreed }
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(20.dp) // Reduced size
+                            .size(20.dp)
                             .background(
                                 if (isAgreed) Color.Black else Color.Transparent,
-                                RoundedCornerShape(3.dp) // Reduced corner radius
+                                RoundedCornerShape(3.dp)
                             )
                             .border(
                                 2.dp,
@@ -362,24 +323,23 @@ fun Wingo30BettingPopupDialog(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "Checked",
                                 tint = Color.White,
-                                modifier = Modifier.size(14.dp) // Reduced size
+                                modifier = Modifier.size(14.dp)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp)) // Reduced spacing
+                    Spacer(modifier = Modifier.width(8.dp))
 
                     Text(
                         text = "I agree",
                         color = Color.Black,
-                        fontSize = 14.sp, // Reduced font size
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }
 
-                Spacer(modifier = Modifier.height(6.dp)) // Reduced spacing
+                Spacer(modifier = Modifier.height(6.dp))
 
-                // Error message display
                 errorMessage?.let { error ->
                     Card(
                         modifier = Modifier
@@ -400,14 +360,13 @@ fun Wingo30BettingPopupDialog(
                     Spacer(modifier = Modifier.height(6.dp))
                 }
 
-                // Buttons - REDUCED HEIGHT
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
                     Button(
                         onClick = onDismiss,
-                        modifier = Modifier.height(40.dp), // Reduced from 48dp
+                        modifier = Modifier.height(40.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color.Gray
                         ),
@@ -416,7 +375,7 @@ fun Wingo30BettingPopupDialog(
                         Text(
                             text = "Cancel",
                             color = Color.White,
-                            fontSize = 14.sp, // Reduced font size
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -431,7 +390,7 @@ fun Wingo30BettingPopupDialog(
                         },
                         modifier = Modifier
                             .weight(1f)
-                            .height(40.dp), // Reduced from 48dp
+                            .height(40.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFFF6B35)
                         ),
@@ -446,9 +405,9 @@ fun Wingo30BettingPopupDialog(
                             )
                         } else {
                             Text(
-                                text = "Total amount: ₹ $totalAmount",
+                                text = "Total amount: ₹ ${String.format("%,.2f", totalAmount)}",
                                 color = Color.White,
-                                fontSize = 14.sp, // Reduced font size
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -459,17 +418,26 @@ fun Wingo30BettingPopupDialog(
     }
 }
 
-// Compose Preview for Wingo30BettingPopupDialog
-@Preview(showBackground = true)
 @Composable
-fun Wingo30BettingPopupDialogPreview() {
-    MaterialTheme {
-        Wingo30BettingPopupDialog(
-            selectedNumber = 7,
-            selectedColor = null,
-            onDismiss = {},
-            onConfirmBet = { _, _, _, _ -> },
-            viewModel = null // Pass null for preview
+fun MultiplierPopupButton(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        shape = RoundedCornerShape(10.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isSelected) Color(0xFFFF6B35) else Color(0xFFE0E0E0),
+            contentColor = if (isSelected) Color.White else Color(0xFFFF6B35)
+        ),
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+        modifier = Modifier.height(32.dp)
+    ) {
+        Text(
+            text = text,
+            fontWeight = FontWeight.Bold,
+            fontSize = 12.sp
         )
     }
 }

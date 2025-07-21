@@ -2,6 +2,8 @@ package com.weblite.kgf.Api2
 
 import com.weblite.kgf.data.GameBetK360
 import com.weblite.kgf.data.GameK360BettingResponse
+import com.weblite.kgf.data.K330GameHistoryResponse
+import com.weblite.kgf.data.K330MyHistoryResponse
 import com.weblite.kgf.data.PeriodIdResponse
 import com.weblite.kgf.data.K360GameHistoryResponse
 import com.weblite.kgf.data.K360MyHistoryResponse
@@ -95,5 +97,31 @@ interface ApiService {
     // Add K3 my history APIs here if available
     @GET("web/Api/k3_1MinMyHistory")
     suspend fun getK360MyHistory(@Query("user_id") userId: String): Response<K360MyHistoryResponse>
+
+    // K3 30-second game APIs
+//    @GET("web/Api/k3periodID")
+//    suspend fun getThirtySecondPeriodIDForK3(@Query("user_id") userId: String): Response<K360PeriodIdResponse>
+//
+//    @POST("/web/Api/k3_30SecBet")
+//    suspend fun placeBet3Sec(@Body request: GameBetK360) : Response<GameK360BettingResponse>
+//
+//    @GET("web/Api/getGameHistory")
+//    suspend fun getK3GameHistory(@Query("user_id") userId: String) : Response<GameHistoryResponse>
+//
+//    @GET("web/Api/k3_30sec_MyHistory")
+//    suspend fun getMyK3GameHistory(@Query("user_id") userId: String) : Response<K360MyHistoryResponse>
+
+    // K3 30-second game APIs (K330) - Using new data classes for history
+    @GET("web/Api/k3periodID")
+    suspend fun getThirtySecondPeriodIDForK3(@Query("user_id") userId: String): Response<K360PeriodIdResponse> // Period ID structure is same
+
+    @POST("/web/Api/k3_30SecBet")
+    suspend fun placeBet3Sec(@Body request: GameBetK360) : Response<GameK360BettingResponse> // Betting structure is same
+
+    @GET("web/Api/getGameHistory")
+    suspend fun getK330GameHistory(@Query("user_id") userId: String) : Response<K330GameHistoryResponse> // Use new K330 specific history
+
+    @GET("web/Api/k3_30sec_MyHistory")
+    suspend fun getK330MyHistory(@Query("user_id") userId: String) : Response<K330MyHistoryResponse> // Use new K330 specific my history
 
 }
