@@ -694,11 +694,11 @@ fun Wingo30Screen(
                         }
                     }
 
-                    // Countdown Overlay - appears only over Combined Game Section in last 5 seconds
+                    // Countdown Overlay - covers the entire Box including Card and controls
                     if (showCountdownOverlay) {
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .matchParentSize()
                                 .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp)),
                             contentAlignment = Alignment.Center
                         ) {
@@ -707,7 +707,6 @@ fun Wingo30Screen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(vertical = 80.dp)
                             ) {
-                                // First digit (0)
                                 Box(
                                     modifier = Modifier
                                         .background(Color.White, RoundedCornerShape(12.dp))
@@ -720,16 +719,12 @@ fun Wingo30Screen(
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
-
-                                // Colon
                                 Text(
                                     text = ":",
                                     color = Color.White,
                                     fontSize = 32.sp,
                                     fontWeight = FontWeight.Bold
                                 )
-
-                                // Second digit (countdown)
                                 Box(
                                     modifier = Modifier
                                         .background(Color.White, RoundedCornerShape(12.dp))

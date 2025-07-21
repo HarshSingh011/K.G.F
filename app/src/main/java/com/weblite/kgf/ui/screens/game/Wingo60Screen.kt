@@ -561,10 +561,10 @@ fun Wingo60Screen(
                                     isSelected = selectedBigSmall == "Big",
                                     onClick = {
                                         if (!showCountdownOverlay) {
-                                            selectedBigSmall = "Big" // Set the selected Big/Small value
-                                            colorSelected = true // Treat Big/Small as a color bet for popup
-                                            selectedColorForBetting = selectedBigSmall // Pass to popup
-                                            showBettingPopup = true // Open the betting popup
+                                            selectedBigSmall = "Big"
+                                            colorSelected = true
+                                            selectedColorForBetting = selectedBigSmall
+                                            showBettingPopup = true
                                         }
                                     },
                                     modifier = Modifier.weight(1f)
@@ -575,10 +575,10 @@ fun Wingo60Screen(
                                     isSelected = selectedBigSmall == "Small",
                                     onClick = {
                                         if (!showCountdownOverlay) {
-                                            selectedBigSmall = "Small" // Set the selected Big/Small value
-                                            colorSelected = true // Treat Big/Small as a color bet for popup
-                                            selectedColorForBetting = selectedBigSmall // Pass to popup
-                                            showBettingPopup = true // Open the betting popup
+                                            selectedBigSmall = "Small"
+                                            colorSelected = true
+                                            selectedColorForBetting = selectedBigSmall
+                                            showBettingPopup = true
                                         }
                                     },
                                     modifier = Modifier.weight(1f)
@@ -587,11 +587,11 @@ fun Wingo60Screen(
                         }
                     }
 
-                    // Countdown Overlay - appears only over Combined Game Section in last 5 seconds
+                    // Countdown Overlay - covers the entire Box including Card and controls
                     if (showCountdownOverlay) {
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .matchParentSize()
                                 .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp)),
                             contentAlignment = Alignment.Center
                         ) {
@@ -600,7 +600,6 @@ fun Wingo60Screen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(vertical = 80.dp)
                             ) {
-                                // First digit (0)
                                 Box(
                                     modifier = Modifier
                                         .background(Color.White, RoundedCornerShape(12.dp))
@@ -613,16 +612,12 @@ fun Wingo60Screen(
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
-
-                                // Colon
                                 Text(
                                     text = ":",
                                     color = Color.White,
                                     fontSize = 32.sp,
                                     fontWeight = FontWeight.Bold
                                 )
-
-                                // Second digit (countdown)
                                 Box(
                                     modifier = Modifier
                                         .background(Color.White, RoundedCornerShape(12.dp))
