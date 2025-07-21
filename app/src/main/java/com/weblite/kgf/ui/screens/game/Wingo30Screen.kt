@@ -137,6 +137,7 @@ fun Wingo30Screen(
     var selectedHistoryTab by remember { mutableStateOf("Game History") }
     var showBettingPopup by remember { mutableStateOf(false) }
     var selectedNumberForBetting by remember { mutableStateOf(0) }
+    var selectedNumberBackgroundColor by remember { mutableStateOf<Color?>(null) }
     var totalBalance by remember { mutableStateOf(17510970.65) }
     var showSuccessMessage by remember { mutableStateOf(false) }
     var selectedColorForBetting by remember { mutableStateOf("Green") }
@@ -623,6 +624,7 @@ fun Wingo30Screen(
                                         onClick = {
                                             if (!showCountdownOverlay) {
                                                 selectedNumberForBetting = item.number
+                                                selectedNumberBackgroundColor = item.backgroundColor
                                                 colorSelected = false
                                                 showBettingPopup = true
                                             }
@@ -815,18 +817,17 @@ fun Wingo30Screen(
 
         // SHOW BETTING POPUP WHEN showBettingPopup IS TRUE
         if (showBettingPopup) {
-            Wingo30BettingPopupDialog( // Changed to Wingo30BettingPopupDialog
+            Wingo30BettingPopupDialog(
                 selectedNumber = if (colorSelected) null else selectedNumberForBetting,
                 selectedColor = if (colorSelected) selectedColorForBetting else null,
+                selectedNumberBackgroundColor = if (colorSelected) null else selectedNumberBackgroundColor,
                 onDismiss = {
                     showBettingPopup = false
-                    colorSelected = false // Reset color selection flag
+                    colorSelected = false
                 },
                 onConfirmBet = { number, color, amount, multiplier ->
-                    // The bet has already been placed successfully by the dialog's internal logic.
-                    // This callback is only for UI updates on the parent screen.
                     showSuccessMessage = true
-                    colorSelected = false // Reset color selection flag
+                    colorSelected = false
                 }
             )
         }

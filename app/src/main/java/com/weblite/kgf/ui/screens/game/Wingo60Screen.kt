@@ -90,6 +90,7 @@ fun Wingo60Screen(
     var selectedBigSmall by remember { mutableStateOf("Big") }
     var showBettingPopup by remember { mutableStateOf(false) }
     var selectedNumberForBetting by remember { mutableStateOf(0) }
+    var selectedNumberBackgroundColor by remember { mutableStateOf<Color?>(null) }
     var totalBalance by remember { mutableStateOf(17510970.65) } // This should ideally come from a ViewModel or user session
     var showSuccessMessage by remember { mutableStateOf(false) }
     var selectedColorForBetting by remember { mutableStateOf("Green") }
@@ -516,6 +517,7 @@ fun Wingo60Screen(
                                         onClick = {
                                             if (!showCountdownOverlay) {
                                                 selectedNumberForBetting = item.number
+                                                selectedNumberBackgroundColor = item.backgroundColor
                                                 colorSelected = false
                                                 showBettingPopup = true
                                             }
@@ -718,15 +720,14 @@ fun Wingo60Screen(
             Wingo60BettingPopupDialog(
                 selectedNumber = if (colorSelected) null else selectedNumberForBetting,
                 selectedColor = if (colorSelected) selectedColorForBetting else null,
+                selectedNumberBackgroundColor = if (colorSelected) null else selectedNumberBackgroundColor,
                 onDismiss = {
                     showBettingPopup = false
-                    colorSelected = false // Reset color selection flag
+                    colorSelected = false
                 },
                 onConfirmBet = { number, color, amount, multiplier ->
-                    // The bet has already been placed successfully by the dialog's internal logic.
-                    // This callback is only for UI updates on the parent screen.
                     showSuccessMessage = true
-                    colorSelected = false // Reset color selection flag
+                    colorSelected = false
                 }
             )
         }

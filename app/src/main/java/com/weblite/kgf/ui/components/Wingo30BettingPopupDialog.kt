@@ -35,6 +35,7 @@ import kotlinx.coroutines.launch
 fun Wingo30BettingPopupDialog(
     selectedNumber: Int? = null,
     selectedColor: String? = null,
+    selectedNumberBackgroundColor: Color? = null,
     onDismiss: () -> Unit,
     onConfirmBet: (Int?, String?, Int, Int) -> Unit, // (number, color, amount, multiplier)
     viewModel: WingoGameViewModel? = null
@@ -108,40 +109,24 @@ fun Wingo30BettingPopupDialog(
 
     // Updated color logic for K3 balls and bet options
     val (topColor, bottomColor) = when {
-        // K3 Ball colors (3-18) - matching the K3Ball data class colors
-        selectedNumber == 3 -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
-        selectedNumber == 4 -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
-        selectedNumber == 5 -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
-        selectedNumber == 6 -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
-        selectedNumber == 7 -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
-        selectedNumber == 8 -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
-        selectedNumber == 9 -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
-        selectedNumber == 10 -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
-        selectedNumber == 11 -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
-        selectedNumber == 12 -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
-        selectedNumber == 13 -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
-        selectedNumber == 14 -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
-        selectedNumber == 15 -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
-        selectedNumber == 16 -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
-        selectedNumber == 17 -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
-        selectedNumber == 18 -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
-
-        // Bet option colors - matching the K3BetOption data class colors
+        // Win Go numbers 0 and 5: split color
+        selectedNumber == 0 -> Pair(Color(0xFFE53935), Color(0xFF9C27B0)) // Red + Violet (for 0)
+        selectedNumber == 5 -> Pair(Color(0xFF4CAF50), Color(0xFF9C27B0)) // Green + Violet (for 5)
+        // For numbers 0-9, use the coin's background color for both top and bottom
+        selectedNumber != null && selectedNumber in 0..9 && selectedNumberBackgroundColor != null -> Pair(selectedNumberBackgroundColor, selectedNumberBackgroundColor)
+        // Bet option colors
         selectedColor == "Big" -> Pair(Color(0xFFFFC107), Color(0xFFFFC107)) // Yellow for Big
         selectedColor == "Small" -> Pair(Color(0xFF2196F3), Color(0xFF2196F3)) // Blue for Small
         selectedColor == "Odd" -> Pair(Color(0xFFFFC107), Color(0xFFFFC107)) // Yellow
         selectedColor == "Even" -> Pair(Color(0xFF2196F3), Color(0xFF2196F3)) // Blue
-
-        // Keep original logic for Win Go numbers (0, 5) if needed
-        selectedNumber == 0 -> Pair(Color(0xFFE53935), Color(0xFF9C27B0)) // Red + Violet (for 0)
-        selectedNumber == 5 -> Pair(Color(0xFF4CAF50), Color(0xFF9C27B0)) // Green + Violet (for 5)
+        selectedColor == "Green" -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50))
+        selectedColor == "Violet" -> Pair(Color(0xFF9C27B0), Color(0xFF9C27B0))
+        selectedColor == "Red" -> Pair(Color(0xFFE53935), Color(0xFFE53935))
+        // Fallback for other numbers
         selectedNumber != null -> {
             val singleColor = getNumberBackgroundColor(selectedNumber)
             Pair(singleColor, singleColor)
         }
-        selectedColor == "Green" -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50))
-        selectedColor == "Violet" -> Pair(Color(0xFF9C27B0), Color(0xFF9C27B0))
-        selectedColor == "Red" -> Pair(Color(0xFFE53935), Color(0xFFE53935))
 
         // Default fallback
         else -> Pair(Color(0xFFFF6B35), Color(0xFFFF6B35))

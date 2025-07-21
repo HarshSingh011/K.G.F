@@ -36,6 +36,7 @@ import kotlinx.coroutines.launch
 fun Wingo60BettingPopupDialog(
     selectedNumber: Int? = null,
     selectedColor: String? = null,
+    selectedNumberBackgroundColor: Color? = null,
     onDismiss: () -> Unit,
     onConfirmBet: (Int?, String?, Int, Int) -> Unit, // (number, color, amount, multiplier)
     viewModel: Wingo60GameViewModel? = null
@@ -98,20 +99,26 @@ fun Wingo60BettingPopupDialog(
 
     // MODIFIED: Updated color logic for K3 balls and bet options to be exhaustive
     val (topColor, bottomColor) = when {
+        // Win Go numbers 0 and 5: split color
+        selectedNumber == 0 -> Pair(Color(0xFFE53935), Color(0xFF9C27B0)) // Red + Violet (for 0)
+        selectedNumber == 5 -> Pair(Color(0xFF4CAF50), Color(0xFF9C27B0)) // Green + Violet (for 5)
+        // For numbers 0-9, use the coin's background color for both top and bottom
+        selectedNumber != null && selectedNumber in 0..9 && selectedNumberBackgroundColor != null -> Pair(selectedNumberBackgroundColor, selectedNumberBackgroundColor)
+        // K3 Ball colors (3-18) - assuming these are single colors
+        selectedNumber in listOf(3, 7, 9, 11, 13, 15, 17) -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
+        selectedNumber in listOf(4, 6, 8, 10, 12, 14, 16, 18) -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
+        // Bet option colors
+        selectedColor == "Big" -> Pair(Color(0xFFFFC107), Color(0xFFFFC107)) // Yellow for Big
+        selectedColor == "Small" -> Pair(Color(0xFF2196F3), Color(0xFF2196F3)) // Blue for Small
+        selectedColor == "Odd" -> Pair(Color(0xFFFFC107), Color(0xFFFFC107)) // Yellow
+        selectedColor == "Even" -> Pair(Color(0xFF2196F3), Color(0xFF2196F3)) // Blue
+        selectedColor == "Green" -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50))
+        selectedColor == "Violet" -> Pair(Color(0xFF9C27B0), Color(0xFF9C27B0))
+        selectedColor == "Red" -> Pair(Color(0xFFE53935), Color(0xFFE53935))
+        // Fallback for other numbers
         selectedNumber != null -> {
-            when (selectedNumber) {
-                // Win Go specific numbers with two colors
-                0 -> Pair(Color(0xFFE53935), Color(0xFF9C27B0)) // Red + Violet (for 0)
-                5 -> Pair(Color(0xFF4CAF50), Color(0xFF9C27B0)) // Green + Violet (for 5)
-                // K3 Ball colors (3-18) - assuming these are single colors
-                3, 5, 7, 9, 11, 13, 15, 17 -> Pair(Color(0xFFE53935), Color(0xFFE53935)) // Red
-                4, 6, 8, 10, 12, 14, 16, 18 -> Pair(Color(0xFF4CAF50), Color(0xFF4CAF50)) // Green
-                // Other numbers (1, 2, 6, 7, 8, 9 from Wingo60Screen's NumberItem)
-                else -> {
-                    val singleColor = getNumberBackgroundColor(selectedNumber)
-                    Pair(singleColor, singleColor)
-                }
-            }
+            val singleColor = getNumberBackgroundColor(selectedNumber)
+            Pair(singleColor, singleColor)
         }
         selectedColor != null -> {
             when (selectedColor) {
