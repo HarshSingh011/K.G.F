@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.ui.graphics.graphicsLayer
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import androidx.compose.material3.Text
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
@@ -42,8 +43,8 @@ fun TigerAndDragonGameScreen(
     onBackClick: () -> Unit // Added new parameter for back navigation
 ) {
     var showTigerOverlay by remember { mutableStateOf(false) }
-    var lastTimer by remember { mutableStateOf(3) }
-    var timerValue by remember { mutableStateOf(3) }
+    var lastTimer by remember { mutableStateOf(30) }
+    var timerValue by remember { mutableStateOf(30) }
     var selectedChipIndex by remember { mutableStateOf(-1) }
     var showHistoryDialog by remember { mutableStateOf(false) } // State to control dialog visibility
     val scope = rememberCoroutineScope()
@@ -152,6 +153,24 @@ fun TigerAndDragonGameScreen(
             }
         }
         // Main game area with lowest z-index
+        // --- State for placed coins in each section ---
+        val (dragonCoins, setDragonCoins) = remember { mutableStateOf(listOf<Int>()) }
+        val (tigerCoins, setTigerCoins) = remember { mutableStateOf(listOf<Int>()) }
+        val (tieCoins, setTieCoins) = remember { mutableStateOf(listOf<Int>()) }
+
+        // Define chipValues here so it's available for addCoinToSection
+        val chipValues = listOf(10, 50, 500, 1000, 5000)
+
+        // Helper to add coin to a section
+        fun addCoinToSection(section: String) {
+            val value = chipValues.getOrNull(selectedChipIndex) ?: return
+            when (section) {
+                "dragon" -> if (dragonCoins.size < 12) setDragonCoins(dragonCoins.plusElement(value))
+                "tiger" -> if (tigerCoins.size < 12) setTigerCoins(tigerCoins.plusElement(value))
+                "tie" -> if (tieCoins.size < 12) setTieCoins(tieCoins.plusElement(value))
+            }
+        }
+
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
@@ -231,11 +250,12 @@ fun TigerAndDragonGameScreen(
                             modifier = Modifier.fillMaxSize(),
                             horizontalArrangement = Arrangement.Center
                         ) {
-                            // Dragon section - no padding, larger
+
+                            // Dragon section
                             Box(
                                 modifier = Modifier
                                     .fillMaxHeight()
-                                    .weight(1f) // Use weight instead of fixed width
+                                    .weight(1f)
                                     .clip(RoundedCornerShape(
                                         topStart = cornerRadius,
                                         bottomStart = cornerRadius,
@@ -243,8 +263,9 @@ fun TigerAndDragonGameScreen(
                                         bottomEnd = 0.dp
                                     ))
                                     .background(Color(0xFF2B3A4B))
-                                    .clickable { }
+                                    .clickable { addCoinToSection("dragon") }
                             ) {
+                                // Image and text first
                                 Column(
                                     modifier = Modifier.fillMaxSize(),
                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -254,48 +275,167 @@ fun TigerAndDragonGameScreen(
                                         painterResource(R.drawable.dragon),
                                         contentDescription = "Dragon",
                                         modifier = Modifier
-                                            .size(avatarSize * 2.8f) // Increased size
-                                            .alpha(0.65f) // Slightly more visible
+                                            .size(avatarSize * 2.8f)
+                                            .alpha(0.65f)
                                     )
                                     Spacer(modifier = Modifier.height(tableHeight * 0.02f))
-                                    androidx.compose.material3.Text(
+                                    Text(
                                         text = "Dragon\n1:2",
-                                        color = Color.White, // Changed to white for better visibility
+                                        color = Color.White,
                                         textAlign = TextAlign.Center,
-                                        fontSize = (tableHeight * 0.08f).value.sp, // Increased font size
+                                        fontSize = (tableHeight * 0.08f).value.sp,
                                         modifier = Modifier.align(Alignment.CenterHorizontally)
                                     )
                                 }
+                                // Coins at the bottom, with higher z-index
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .align(Alignment.BottomCenter)
+                                        .zIndex(2f)
+                                        .padding(bottom = 12.dp)
+                                ) {
+                                    val dragonTopRow = dragonCoins.take(6)
+                                    val dragonBottomRow = dragonCoins.drop(6)
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Bottom
+                                    ) {
+                                        Row(
+                                            horizontalArrangement = Arrangement.Center,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            dragonTopRow.forEach { value ->
+                                                Image(
+                                                    painter = painterResource(
+                                                        when (value) {
+                                                            10 -> R.drawable.chip_10
+                                                            50 -> R.drawable.chip_50
+                                                            500 -> R.drawable.chip_500
+                                                            1000 -> R.drawable.chip_1000
+                                                            5000 -> R.drawable.chip_5000
+                                                            else -> R.drawable.chip_10
+                                                        }
+                                                    ),
+                                                    contentDescription = "Coin $value",
+                                                    modifier = Modifier.size(28.dp).padding(2.dp)
+                                                )
+                                            }
+                                        }
+                                        Row(
+                                            horizontalArrangement = Arrangement.Center,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            dragonBottomRow.forEach { value ->
+                                                Image(
+                                                    painter = painterResource(
+                                                        when (value) {
+                                                            10 -> R.drawable.chip_10
+                                                            50 -> R.drawable.chip_50
+                                                            500 -> R.drawable.chip_500
+                                                            1000 -> R.drawable.chip_1000
+                                                            5000 -> R.drawable.chip_5000
+                                                            else -> R.drawable.chip_10
+                                                        }
+                                                    ),
+                                                    contentDescription = "Coin $value",
+                                                    modifier = Modifier.size(28.dp).padding(2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
-                            // Tie section - no padding, larger
+
+                            // Tie section
                             Box(
                                 modifier = Modifier
                                     .fillMaxHeight()
-                                    .weight(1f) // Use weight instead of fixed width
+                                    .weight(1f)
                                     .background(Color(0xFF43A047))
-                                    .clickable { }
+                                    .clickable { addCoinToSection("tie") }
                             ) {
+                                // Image and text first
                                 Column(
                                     modifier = Modifier.fillMaxSize(),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
-                                    androidx.compose.material3.Text(
+                                    Text(
                                         text = "TIE\n1:8",
-                                        color = Color.White, // Changed to white for better visibility
+                                        color = Color.White,
                                         textAlign = TextAlign.Center,
-                                        fontSize = (tableHeight * 0.10f).value.sp, // Increased font size
+                                        fontSize = (tableHeight * 0.10f).value.sp,
                                         modifier = Modifier.align(Alignment.CenterHorizontally)
                                     )
                                 }
+                                // Coins at the bottom, with higher z-index
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .align(Alignment.BottomCenter)
+                                        .zIndex(2f)
+                                        .padding(bottom = 12.dp)
+                                ) {
+                                    val tieTopRow = tieCoins.take(6)
+                                    val tieBottomRow = tieCoins.drop(6)
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Bottom
+                                    ) {
+                                        Row(
+                                            horizontalArrangement = Arrangement.Center,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            tieTopRow.forEach { value ->
+                                                Image(
+                                                    painter = painterResource(
+                                                        when (value) {
+                                                            10 -> R.drawable.chip_10
+                                                            50 -> R.drawable.chip_50
+                                                            500 -> R.drawable.chip_500
+                                                            1000 -> R.drawable.chip_1000
+                                                            5000 -> R.drawable.chip_5000
+                                                            else -> R.drawable.chip_10
+                                                        }
+                                                    ),
+                                                    contentDescription = "Coin $value",
+                                                    modifier = Modifier.size(28.dp).padding(2.dp)
+                                                )
+                                            }
+                                        }
+                                        Row(
+                                            horizontalArrangement = Arrangement.Center,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            tieBottomRow.forEach { value ->
+                                                Image(
+                                                    painter = painterResource(
+                                                        when (value) {
+                                                            10 -> R.drawable.chip_10
+                                                            50 -> R.drawable.chip_50
+                                                            500 -> R.drawable.chip_500
+                                                            1000 -> R.drawable.chip_1000
+                                                            5000 -> R.drawable.chip_5000
+                                                            else -> R.drawable.chip_10
+                                                        }
+                                                    ),
+                                                    contentDescription = "Coin $value",
+                                                    modifier = Modifier.size(28.dp).padding(2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
-                            // Tiger section - no padding, larger
+
+                            // Tiger section
                             Box(
                                 modifier = Modifier
                                     .fillMaxHeight()
-                                    .weight(1f) // Use weight instead of fixed width
+                                    .weight(1f)
                                     .clip(RoundedCornerShape(
                                         topStart = 0.dp,
                                         bottomStart = 0.dp,
@@ -303,8 +443,9 @@ fun TigerAndDragonGameScreen(
                                         bottomEnd = cornerRadius
                                     ))
                                     .background(Color(0xFFED6A5A))
-                                    .clickable { }
+                                    .clickable { addCoinToSection("tiger") }
                             ) {
+                                // Image and text first
                                 Column(
                                     modifier = Modifier.fillMaxSize(),
                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -314,17 +455,75 @@ fun TigerAndDragonGameScreen(
                                         painterResource(R.drawable.tiger),
                                         contentDescription = "Tiger",
                                         modifier = Modifier
-                                            .size(avatarSize * 2.8f) // Increased size
-                                            .alpha(0.65f) // Slightly more visible
+                                            .size(avatarSize * 2.8f)
+                                            .alpha(0.65f)
                                     )
                                     Spacer(modifier = Modifier.height(tableHeight * 0.02f))
-                                    androidx.compose.material3.Text(
+                                    Text(
                                         text = "Tiger\n1:2",
-                                        color = Color.White, // Changed to white for better visibility
+                                        color = Color.White,
                                         textAlign = TextAlign.Center,
-                                        fontSize = (tableHeight * 0.08f).value.sp, // Increased font size
+                                        fontSize = (tableHeight * 0.08f).value.sp,
                                         modifier = Modifier.align(Alignment.CenterHorizontally)
                                     )
+                                }
+                                // Coins at the bottom, with higher z-index
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .align(Alignment.BottomCenter)
+                                        .zIndex(2f)
+                                        .padding(bottom = 12.dp)
+                                ) {
+                                    val tigerTopRow = tigerCoins.take(6)
+                                    val tigerBottomRow = tigerCoins.drop(6)
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Bottom
+                                    ) {
+                                        Row(
+                                            horizontalArrangement = Arrangement.Center,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            tigerTopRow.forEach { value ->
+                                                Image(
+                                                    painter = painterResource(
+                                                        when (value) {
+                                                            10 -> R.drawable.chip_10
+                                                            50 -> R.drawable.chip_50
+                                                            500 -> R.drawable.chip_500
+                                                            1000 -> R.drawable.chip_1000
+                                                            5000 -> R.drawable.chip_5000
+                                                            else -> R.drawable.chip_10
+                                                        }
+                                                    ),
+                                                    contentDescription = "Coin $value",
+                                                    modifier = Modifier.size(28.dp).padding(2.dp)
+                                                )
+                                            }
+                                        }
+                                        Row(
+                                            horizontalArrangement = Arrangement.Center,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            tigerBottomRow.forEach { value ->
+                                                Image(
+                                                    painter = painterResource(
+                                                        when (value) {
+                                                            10 -> R.drawable.chip_10
+                                                            50 -> R.drawable.chip_50
+                                                            500 -> R.drawable.chip_500
+                                                            1000 -> R.drawable.chip_1000
+                                                            5000 -> R.drawable.chip_5000
+                                                            else -> R.drawable.chip_10
+                                                        }
+                                                    ),
+                                                    contentDescription = "Coin $value",
+                                                    modifier = Modifier.size(28.dp).padding(2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -484,7 +683,7 @@ fun TigerAndDragonGameScreen(
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
-                                androidx.compose.material3.Text(
+                                Text(
                                     text = if (idx == 0) "..." else it,
                                     color = Color.White,
                                     fontSize = 16.sp
@@ -639,7 +838,7 @@ fun TigerAndDragonGameScreen(
                         .padding(horizontal = 38.dp, vertical = 18.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    androidx.compose.material3.Text(
+                    Text(
                         text = timerValue.toString(),
                         color = Color(0xFF1B263B),
                         fontSize = 38.sp,
@@ -718,7 +917,7 @@ fun UserChip(userName: String, amount: Double, avatarRes: Int, modifier: Modifie
                 .padding(1.dp)
         )
         Spacer(modifier = Modifier.height(1.dp))
-        androidx.compose.material3.Text(
+        Text(
             text = userName,
             color = Color(0xFF39FF14), // more opaque green
             fontSize = 10.sp,
@@ -734,7 +933,7 @@ fun UserChip(userName: String, amount: Double, avatarRes: Int, modifier: Modifie
                 )
                 .padding(horizontal = 3.dp, vertical = 1.dp)
         )
-        androidx.compose.material3.Text(
+        Text(
             text = String.format("%.2f", amount),
             color = Color(0xFF39FF14), // more opaque green
             fontSize = 10.sp,
