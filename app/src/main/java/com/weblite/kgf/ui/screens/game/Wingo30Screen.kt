@@ -124,6 +124,8 @@ fun getNumberBackgroundColor(number: Int): Color {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Wingo30Screen(
+    // Auto-dismiss success message after a short period
+    
     onBackClick: () -> Unit = {},
     onShowTopBar: (Boolean) -> Unit,
     onShowBottomBar: (Boolean) -> Unit,
@@ -158,6 +160,13 @@ fun Wingo30Screen(
     // Initial fetch of period ID
     LaunchedEffect(Unit) {
         viewModel.fetchPeriodId()
+    }
+
+    LaunchedEffect(showSuccessMessage) {
+        if (showSuccessMessage) {
+            delay(400)
+            showSuccessMessage = false
+        }
     }
 
     // UI Update for period ID and timer synchronization
@@ -828,6 +837,9 @@ fun Wingo30Screen(
                 onConfirmBet = { number, color, amount, multiplier ->
                     showSuccessMessage = true
                     colorSelected = false
+                    // Restore API calls after betting
+                    viewModel.fetchMyHistory()
+//                    viewModel.fetchGameHistory()
                 }
             )
         }

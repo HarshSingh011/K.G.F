@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -38,7 +39,8 @@ fun Wingo30BettingPopupDialog(
     selectedNumberBackgroundColor: Color? = null,
     onDismiss: () -> Unit,
     onConfirmBet: (Int?, String?, Int, Int) -> Unit, // (number, color, amount, multiplier)
-    viewModel: WingoGameViewModel? = null
+    viewModel: WingoGameViewModel = hiltViewModel()
+//    viewModel: WingoGameViewModel ?= null
 ) {
     // Log the initial values received by the dialog
     android.util.Log.d("Wingo30BettingPopupDialog", "Dialog initialized with:")
@@ -65,6 +67,7 @@ fun Wingo30BettingPopupDialog(
         isLoading = true
         errorMessage = null
 
+
         try {
             // Determine bidNum and bidType correctly
             val (bidNum, bidType) = when {
@@ -89,12 +92,14 @@ fun Wingo30BettingPopupDialog(
             val result = viewModel?.placeBet(
                 bidNum = bidNum,
                 bidType = bidType,
-                quantity = "1",
+                quantity = multiplierValue.toString(),
                 price = totalAmount.toString()
-            ) ?: Result.success("Preview")
+            ) ?: Result.failure(Exception("No ViewModel"))
 
             if (result.isSuccess) {
                 onConfirmBet(selectedNumber, selectedColor, baseAmount, multiplierValue)
+                viewModel?.fetchMyHistory()
+                viewModel?.fetchGameHistory()
                 onDismiss()
             } else {
                 errorMessage = result.exceptionOrNull()?.message ?: "Bet placement failed"
@@ -148,9 +153,14 @@ fun Wingo30BettingPopupDialog(
         )
     ) {
         // Semi-transparent background overlay
+        val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+        val showAboveKeyboard = imeBottom > 0
         Box(
-            modifier = Modifier.fillMaxSize().padding(bottom = 90.dp),
-            contentAlignment = if (selectInputField) Alignment.Center else Alignment.BottomEnd
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding()
+                .padding(bottom = if (showAboveKeyboard) 40.dp else 0.dp),
+            contentAlignment = if (showAboveKeyboard) Alignment.BottomCenter else Alignment.Center
         ) {
             // Dialog content positioned at bottom
             Column(
@@ -203,14 +213,16 @@ fun Wingo30BettingPopupDialog(
                     ) {
                         Box(
                             modifier = Modifier
-                                .background(Color.White, RoundedCornerShape(6.dp)) // Reduced corner radius
-                                .padding(horizontal = 16.dp, vertical = 4.dp) // Reduced padding
+                                .align(Alignment.Center)
+                                .background(Color.White, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 12.dp, vertical = 4.dp)
                         ) {
                             Text(
                                 text = displayText,
                                 color = Color.Black,
-                                fontSize = 14.sp, // Reduced from 18sp
-                                fontWeight = FontWeight.Bold
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
                             )
                         }
                     }
@@ -220,19 +232,22 @@ fun Wingo30BettingPopupDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 6.dp), // Reduced padding
+                        .height(56.dp) // Increased height
+                        .padding(horizontal = 12.dp, vertical = 10.dp), // Increased vertical padding
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = "Balance",
                         color = Color.Black,
-                        fontSize = 16.sp, // Reduced from 18sp
+                        fontSize = 18.sp, // Increased font size
                         fontWeight = FontWeight.Bold
                     )
 
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp), // Reduced spacing
+                        modifier = Modifier
+                            .width(IntrinsicSize.Min), // Ensures Row is only as wide as needed
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         listOf(1, 10, 100, 1000).forEach { balance ->
@@ -241,18 +256,20 @@ fun Wingo30BettingPopupDialog(
                                     selectedBalance = balance
                                     betAmount = balance.toString()
                                 },
-                                shape = RoundedCornerShape(10.dp), // Reduced corner radius
+                                shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (selectedBalance == balance) Color(0xFFFF6B35) else Color(0xFFE0E0E0),
                                     contentColor = if (selectedBalance == balance) Color.White else Color(0xFFFF6B35)
                                 ),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp), // Reduced padding
-                                modifier = Modifier.height(32.dp) // Reduced height
+                                modifier = Modifier
+                                    .padding(0.dp), // Remove extra padding
+                                contentPadding = PaddingValues(0.dp) // Remove Button's internal padding
                             ) {
                                 Text(
                                     text = balance.toString(),
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp // Reduced font size
+                                    fontSize = 16.sp,
+                                    maxLines = 1
                                 )
                             }
                         }
@@ -445,16 +462,16 @@ fun Wingo30BettingPopupDialog(
 }
 
 // Compose Preview for Wingo30BettingPopupDialog
-@Preview(showBackground = true)
-@Composable
-fun Wingo30BettingPopupDialogPreview() {
-    MaterialTheme {
-        Wingo30BettingPopupDialog(
-            selectedNumber = 7,
-            selectedColor = null,
-            onDismiss = {},
-            onConfirmBet = { _, _, _, _ -> },
-            viewModel = null // Pass null for preview
-        )
-    }
-}
+//@Preview(showBackground = true)
+//@Composable
+//fun Wingo30BettingPopupDialogPreview() {
+//    MaterialTheme {
+//        Wingo30BettingPopupDialog(
+//            selectedNumber = 7,
+//            selectedColor = null,
+//            onDismiss = {},
+//            onConfirmBet = { _, _, _, _ -> },
+//            viewModel = null // Pass null for preview
+//        )
+//    }
+//}

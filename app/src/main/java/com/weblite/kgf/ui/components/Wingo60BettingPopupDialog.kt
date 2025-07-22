@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -39,7 +40,8 @@ fun Wingo60BettingPopupDialog(
     selectedNumberBackgroundColor: Color? = null,
     onDismiss: () -> Unit,
     onConfirmBet: (Int?, String?, Int, Int) -> Unit, // (number, color, amount, multiplier)
-    viewModel: Wingo60GameViewModel? = null
+//    viewModel: Wingo60GameViewModel? = null
+    viewModel: Wingo60GameViewModel? = hiltViewModel()
 ) {
     // Log the initial values received by the dialog
     android.util.Log.d("Wingo60BettingPopupDialog", "Dialog initialized with:")
@@ -79,7 +81,7 @@ fun Wingo60BettingPopupDialog(
             val result = viewModel?.placeBet(
                 bidNum = bidNum,
                 bidType = bidType,
-                quantity = "1",
+                quantity = multiplierValue.toString(),
                 price = totalAmount.toString()
             ) ?: Result.success("Preview")
 
@@ -149,295 +151,290 @@ fun Wingo60BettingPopupDialog(
             usePlatformDefaultWidth = false
         )
     ) {
-        // Semi-transparent background overlay
+        // Keyboard-aware dialog placement and overlay
+        val ime = WindowInsets.ime
+        val imeVisible = ime.getBottom(LocalDensity.current) > 0
+        val contentAlignment = if (imeVisible) Alignment.BottomCenter else Alignment.Center
+        val bottomPadding = if (imeVisible) 24.dp else 0.dp
+
         Box(
-            modifier = Modifier.fillMaxSize().padding(bottom = 90.dp),
-            contentAlignment = if (selectInputField) Alignment.Center else Alignment.BottomEnd
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding()
+                .padding(bottom = bottomPadding),
+            contentAlignment = contentAlignment
         ) {
-            // Dialog content positioned at bottom
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState())
+            Box(
+                modifier = Modifier
+                    .wrapContentSize()
                     .background(Color.White, RectangleShape)
             ) {
-                // Header Section with Split Colors - REDUCED HEIGHT
+                // All existing dialog content preserved below
                 Column(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.verticalScroll(rememberScrollState())
                 ) {
-                    // Top Row - "Win Go 60s" with first color - REDUCED HEIGHT
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(35.dp) // Reduced from 50dp to 35dp
-                            .background(topColor),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // Close button at top right
-                        IconButton(
-                            onClick = onDismiss,
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .size(32.dp) // Reduced size
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp) // Reduced size
-                            )
-                        }
-
-                        // Center text - Updated for Win Go
-                        Text(
-                            text = "Win Go 60s", // Updated text
-                            color = Color.White, // Changed to white for better visibility
-                            fontSize = 16.sp, // Reduced from 20sp
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    // Bottom Row - "Select [number]" with second color - REDUCED HEIGHT
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(35.dp) // Reduced from 50dp to 35dp
-                            .background(bottomColor),
-                        contentAlignment = Alignment.Center
+                    // Header Section with Split Colors - REDUCED HEIGHT
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Box(
                             modifier = Modifier
-                                .background(Color.White, RoundedCornerShape(6.dp)) // Reduced corner radius
-                                .padding(horizontal = 16.dp, vertical = 4.dp) // Reduced padding
+                                .fillMaxWidth()
+                                .height(35.dp)
+                                .background(topColor),
+                            contentAlignment = Alignment.Center
                         ) {
+                            IconButton(
+                                onClick = onDismiss,
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Close",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                             Text(
-                                text = displayText,
-                                color = Color.Black,
-                                fontSize = 14.sp, // Reduced font size
+                                text = "Win Go 60s",
+                                color = Color.White,
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                    }
-                }
-
-                // Balance Selection - REDUCED SPACING
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 6.dp), // Reduced padding
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Balance",
-                        color = Color.Black,
-                        fontSize = 16.sp, // Reduced from 18sp
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp), // Reduced spacing
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        listOf(1, 10, 100, 1000).forEach { balance ->
-                            Button(
-                                onClick = {
-                                    selectedBalance = balance
-                                    betAmount = balance.toString()
-                                },
-                                shape = RoundedCornerShape(10.dp), // Reduced corner radius
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (selectedBalance == balance) Color(0xFFFF6B35) else Color(0xFFE0E0E0),
-                                    contentColor = if (selectedBalance == balance) Color.White else Color(0xFFFF6B35)
-                                ),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp), // Reduced padding
-                                modifier = Modifier.height(32.dp) // Reduced height
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(35.dp)
+                                .background(bottomColor),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .background(Color.White, RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = balance.toString(),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp // Reduced font size
+                                    text = displayText,
+                                    color = Color.Black,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
                     }
-                }
-
-                // Bet Amount Input - REDUCED SPACING
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp), // Reduced padding
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Bet Amount",
-                        color = Color.Black,
-                        fontSize = 16.sp, // Reduced from 18sp
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    OutlinedTextField(
-                        value = betAmount,
-                        onValueChange = {
-                            selectInputField = true
-                            betAmount = it
-                        },
+                    // Balance Selection
+                    Row(
                         modifier = Modifier
-                            .height(50.dp) // Reduced from 50dp
-                            .padding(start = 12.dp), // Reduced padding
-                        textStyle = LocalTextStyle.current.copy(
-                            fontSize = 13.sp, // Reduced font size
-                            color = Color.Black
-                        ),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFFFF6B35),
-                            unfocusedBorderColor = Color.Gray,
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black
-                        ),
-                        shape = RoundedCornerShape(5.dp) // Reduced corner radius
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(6.dp)) // Reduced spacing
-
-                // Multiplier Selection - REDUCED SPACING
-                LazyRow(
-                    modifier = Modifier.padding(horizontal = 6.dp), // Reduced padding
-                    horizontalArrangement = Arrangement.spacedBy(3.dp) // Reduced spacing
-                ) {
-                    items(listOf("X1", "X5", "X10", "X20", "X50", "X100")) { multiplier ->
-                        MultiplierPopupButton(
-                            text = multiplier,
-                            isSelected = selectedMultiplier == multiplier,
-                            onClick = {
-                                selectedMultiplier = multiplier
-                                // Only update the multiplier, don't change betAmount
-                                // Total amount will automatically recalculate
-                            }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp)) // Reduced spacing
-
-                // Agreement Checkbox - REDUCED SPACING
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp) // Reduced padding
-                        .clickable { isAgreed = !isAgreed }
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp) // Reduced size
-                            .background(
-                                if (isAgreed) Color.Black else Color.Transparent,
-                                RoundedCornerShape(3.dp) // Reduced corner radius
-                            )
-                            .border(
-                                2.dp,
-                                if (isAgreed) Color.Black else Color.Gray,
-                                RoundedCornerShape(3.dp)
-                            ),
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (isAgreed) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Checked",
-                                tint = Color.White,
-                                modifier = Modifier.size(14.dp) // Reduced size
-                            )
+                        Text(
+                            text = "Balance",
+                            color = Color.Black,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Row(
+                            modifier = Modifier
+                                .width(IntrinsicSize.Min), // Ensures Row is only as wide as needed
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            listOf(1, 10, 100, 1000).forEach { balance ->
+                                Button(
+                                    onClick = {
+                                        selectedBalance = balance
+                                        betAmount = balance.toString()
+                                    },
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (selectedBalance == balance) Color(0xFFFF6B35) else Color(0xFFE0E0E0),
+                                        contentColor = if (selectedBalance == balance) Color.White else Color(0xFFFF6B35)
+                                    ),
+                                    modifier = Modifier
+                                        .padding(0.dp), // Remove extra padding
+                                    contentPadding = PaddingValues(0.dp) // Remove Button's internal padding
+                                ) {
+                                    Text(
+                                        text = balance.toString(),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
                         }
                     }
-
-                    Spacer(modifier = Modifier.width(8.dp)) // Reduced spacing
-
-                    Text(
-                        text = "I agree",
-                        color = Color.Black,
-                        fontSize = 14.sp, // Reduced font size
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(6.dp)) // Reduced spacing
-
-                // Error message display
-                errorMessage?.let { error ->
-                    Card(
+                    // Bet Amount Input
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFFFFEB3B)
-                        ),
-                        shape = RoundedCornerShape(8.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = error,
-                            color = Color(0xFFD32F2F),
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(8.dp)
+                            text = "Bet Amount",
+                            color = Color.Black,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        OutlinedTextField(
+                            value = betAmount,
+                            onValueChange = {
+                                selectInputField = true
+                                betAmount = it
+                            },
+                            modifier = Modifier
+                                .height(50.dp)
+                                .padding(start = 12.dp),
+                            textStyle = LocalTextStyle.current.copy(
+                                fontSize = 13.sp,
+                                color = Color.Black
+                            ),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFFFF6B35),
+                                unfocusedBorderColor = Color.Gray,
+                                focusedTextColor = Color.Black,
+                                unfocusedTextColor = Color.Black
+                            ),
+                            shape = RoundedCornerShape(5.dp)
                         )
                     }
                     Spacer(modifier = Modifier.height(6.dp))
-                }
-
-                // Buttons - REDUCED HEIGHT
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(0.dp)
-                ) {
-                    Button(
-                        onClick = onDismiss,
-                        modifier = Modifier.height(40.dp), // Reduced from 48dp
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.Gray
-                        ),
-                        shape = RectangleShape
+                    // Multiplier Selection
+                    LazyRow(
+                        modifier = Modifier.padding(horizontal = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
+                        items(listOf("X1", "X5", "X10", "X20", "X50", "X100")) { multiplier ->
+                            MultiplierPopupButton(
+                                text = multiplier,
+                                isSelected = selectedMultiplier == multiplier,
+                                onClick = {
+                                    selectedMultiplier = multiplier
+                                }
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    // Agreement Checkbox
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp)
+                            .clickable { isAgreed = !isAgreed }
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(20.dp)
+                                .background(
+                                    if (isAgreed) Color.Black else Color.Transparent,
+                                    RoundedCornerShape(3.dp)
+                                )
+                                .border(
+                                    2.dp,
+                                    if (isAgreed) Color.Black else Color.Gray,
+                                    RoundedCornerShape(3.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isAgreed) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Checked",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Cancel",
-                            color = Color.White,
-                            fontSize = 14.sp, // Reduced font size
-                            fontWeight = FontWeight.Bold
+                            text = "I agree",
+                            color = Color.Black,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
-
-                    Button(
-                        onClick = {
-                            if (isAgreed && !isLoading) {
-                                coroutineScope.launch {
-                                    placeBet()
-                                }
-                            }
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(40.dp), // Reduced from 48dp
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFF6B35)
-                        ),
-                        shape = RectangleShape,
-                        enabled = isAgreed && !isLoading
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = Color.White,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    // Error message display
+                    errorMessage?.let { error ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFFFEB3B)
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
                             Text(
-                                text = "Total amount: ₹ $totalAmount",
+                                text = error,
+                                color = Color(0xFFD32F2F),
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
+                    // Buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(0.dp)
+                    ) {
+                        Button(
+                            onClick = onDismiss,
+                            modifier = Modifier.height(40.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Gray
+                            ),
+                            shape = RectangleShape
+                        ) {
+                            Text(
+                                text = "Cancel",
                                 color = Color.White,
-                                fontSize = 14.sp, // Reduced font size
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
+                        }
+                        Button(
+                            onClick = {
+                                if (isAgreed && !isLoading) {
+                                    coroutineScope.launch {
+                                        placeBet()
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFFF6B35)
+                            ),
+                            shape = RectangleShape,
+                            enabled = isAgreed && !isLoading
+                        ) {
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text(
+                                    text = "Total amount: ₹ $totalAmount",
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
@@ -448,16 +445,16 @@ fun Wingo60BettingPopupDialog(
 
 
 
-@Preview(showBackground = true)
-@Composable
-fun Wingo60BettingPopupDialogPreview() {
-    MaterialTheme {
-        Wingo60BettingPopupDialog(
-            selectedNumber = 5,
-            selectedColor = null,
-            onDismiss = {},
-            onConfirmBet = { _, _, _, _ -> },
-            viewModel = null // Pass null for preview
-        )
-    }
-}
+//@Preview(showBackground = true)
+//@Composable
+//fun Wingo60BettingPopupDialogPreview() {
+//    MaterialTheme {
+//        Wingo60BettingPopupDialog(
+//            selectedNumber = 5,
+//            selectedColor = null,
+//            onDismiss = {},
+//            onConfirmBet = { _, _, _, _ -> },
+//            viewModel = null // Pass null for preview
+//        )
+//    }
+//}

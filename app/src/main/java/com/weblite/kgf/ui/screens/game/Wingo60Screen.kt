@@ -73,6 +73,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.weblite.kgf.Api2.Resource // Import the Resource sealed class
 import com.weblite.kgf.viewmodel.Wingo60GameViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -185,6 +186,13 @@ fun Wingo60Screen(
             android.util.Log.d("Wingo30Screen", "Auto-closing betting dialog due to countdown overlay")
             showBettingPopup = false
             colorSelected = false
+        }
+    }
+
+    LaunchedEffect(showSuccessMessage) {
+        if (showSuccessMessage) {
+            delay(400)
+            showSuccessMessage = false
         }
     }
 
@@ -728,6 +736,8 @@ fun Wingo60Screen(
                 onConfirmBet = { number, color, amount, multiplier ->
                     showSuccessMessage = true
                     colorSelected = false
+                    viewModel.fetchMyHistory()
+//                    viewModel.fetchGameHistory()
                 }
             )
         }
