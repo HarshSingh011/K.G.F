@@ -154,9 +154,6 @@ fun Wingo60Screen(
             is Resource.Error -> listOf(
                 listOf("Error", "Error", "Error", "Error", "Error")
             )
-            null -> listOf(
-                listOf("Loading...", "Loading...", "Loading...", "Loading...", "Loading...")
-            )
             else -> listOf(
                 listOf("Loading...", "Loading...", "Loading...", "Loading...", "Loading...")
             )

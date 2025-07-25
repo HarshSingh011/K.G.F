@@ -657,6 +657,13 @@ fun K3Ui60(
             }
         }
 
+        LaunchedEffect(showSuccessMessage) {
+            if (showSuccessMessage) {
+                delay(400)
+                showSuccessMessage = false
+            }
+        }
+
         if (showBettingPopup) {
             K360BettingPopupDialog(
                 selectedNumber = selectedNumberForBetting,

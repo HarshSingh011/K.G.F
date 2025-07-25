@@ -17,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalDensity
@@ -159,8 +160,8 @@ fun Wingo30BettingPopupDialog(
             modifier = Modifier
                 .fillMaxSize()
                 .imePadding()
-                .padding(bottom = if (showAboveKeyboard) 40.dp else 0.dp),
-            contentAlignment = if (showAboveKeyboard) Alignment.BottomCenter else Alignment.Center
+                .padding(bottom = if (showAboveKeyboard) 40.dp else 100.dp),
+            contentAlignment = Alignment.BottomCenter
         ) {
             // Dialog content positioned at bottom
             Column(
@@ -207,22 +208,25 @@ fun Wingo30BettingPopupDialog(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(35.dp) // Reduced from 50dp to 35dp
-                            .background(bottomColor),
+                            .height(35.dp)
+                            .background(bottomColor)
+                            .padding(horizontal = 8.dp, vertical = 2.dp), // Add horizontal padding to prevent edge overflow
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
-                                .align(Alignment.Center)
-                                .background(Color.White, RoundedCornerShape(6.dp))
-                                .padding(horizontal = 12.dp, vertical = 4.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color.White)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .fillMaxHeight(), // Ensure it doesn't exceed parent height
                         ) {
                             Text(
                                 text = displayText,
                                 color = Color.Black,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                maxLines = 1
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis // Prevent overflow
                             )
                         }
                     }
@@ -461,7 +465,7 @@ fun Wingo30BettingPopupDialog(
     }
 }
 
-// Compose Preview for Wingo30BettingPopupDialog
+
 //@Preview(showBackground = true)
 //@Composable
 //fun Wingo30BettingPopupDialogPreview() {

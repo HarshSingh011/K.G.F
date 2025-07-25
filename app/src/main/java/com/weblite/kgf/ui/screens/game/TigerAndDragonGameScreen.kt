@@ -32,40 +32,93 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.weblite.kgf.ui.screens.game.GameHistoryDialogTigerAndDragon
+import com.weblite.kgf.viewmodel.TigerAndDragonViewModel
+import com.weblite.kgf.data.TigerAndDragonDataClasses.TigerGameHistoryResponse
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import android.widget.Toast // For showing messages
+import android.util.Log // Import for logging
+import com.weblite.kgf.Api2.Resource
+import kotlinx.coroutines.Job
 
 @Composable
 fun TigerAndDragonGameScreen(
     onShowTopBar: (Boolean) -> Unit,
     onShowBottomBar: (Boolean) -> Unit,
-    onBackClick: () -> Unit // Added new parameter for back navigation
+    onBackClick: () -> Unit, // Added new parameter for back
+    viewModel: TigerAndDragonViewModel = hiltViewModel(),
 ) {
     var showTigerOverlay by remember { mutableStateOf(false) }
-    var lastTimer by remember { mutableStateOf(30) }
-    var timerValue by remember { mutableStateOf(30) }
+    var showPeriodId by remember { mutableStateOf("") }
+    var activeTab by remember { mutableStateOf("game-history") } // Track active tab
+
+    // Use ViewModel timer instead of local timer
+    val secondsRemaining by viewModel.secondsRemaining.collectAsState()
+
+    // Collect game history state
+    val gameHistoryState by viewModel.gameHistory.collectAsState()
     var selectedChipIndex by remember { mutableStateOf(-1) }
-    var showHistoryDialog by remember { mutableStateOf(false) } // State to control dialog visibility
+    var showHistoryDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    // Hide system status bar when this screen is shown
-    DisposableEffect(Unit) {
-        val activity = context as? Activity
-        val window = activity?.window
-        val decorView = window?.decorView
-        val controller = window?.let {
-            androidx.core.view.WindowInsetsControllerCompat(it, decorView!!)
+
+    // State for placed coins in each section (visible on UI)
+    var dragonCoins by remember { mutableStateOf(listOf<Int>()) }
+    var tigerCoins by remember { mutableStateOf(listOf<Int>()) }
+    var tieCoins by remember { mutableStateOf(listOf<Int>()) }
+
+    // Track all coins placed (even those not visible)
+    var dragonAllCoins by remember { mutableStateOf(listOf<Int>()) }
+    var tigerAllCoins by remember { mutableStateOf(listOf<Int>()) }
+    var tieAllCoins by remember { mutableStateOf(listOf<Int>()) }
+
+    // Define chipValues here so it's available for addCoinToSection
+    val chipValues = listOf(10, 50, 500, 1000, 5000)
+
+    // Helper to add coin to a section (use section param)
+    fun addCoinToSection(section: String) {
+        val value = chipValues.getOrNull(selectedChipIndex) ?: return
+        when (section) {
+            "dragon" -> {
+                dragonAllCoins = dragonAllCoins + value
+                dragonCoins = dragonAllCoins // Show all coins for correct sum
+            }
+            "tiger" -> {
+                tigerAllCoins = tigerAllCoins + value
+                tigerCoins = tigerAllCoins
+            }
+            "tie" -> {
+                tieAllCoins = tieAllCoins + value
+                tieCoins = tieAllCoins
+            }
         }
-        controller?.hide(androidx.core.view.WindowInsetsCompat.Type.statusBars())
-        onDispose {
-            controller?.show(androidx.core.view.WindowInsetsCompat.Type.statusBars())
+        val dragonSum = dragonAllCoins.sum()
+        val tigerSum = tigerAllCoins.sum()
+        val tieSum = tieAllCoins.sum()
+        Log.d("TigerAndDragonGameScreen", "Added coin $value to $section. Dragon: $dragonSum, Tiger: $tigerSum, Tie: $tieSum")
+    }
+
+    // Tab-specific logic for fetching data
+    LaunchedEffect(activeTab) {
+        if (activeTab == "game-history") {
+            viewModel.startGameHistoryPolling()
+            viewModel.fetchGameHistory()
+        } else {
+            viewModel.stopGameHistoryPolling()
+            viewModel.fetchMyHistory()
         }
     }
+
     LaunchedEffect(Unit) {
         onShowTopBar(false)
         onShowBottomBar(false)
     }
+
     DisposableEffect(Unit) {
         val activity = context as? Activity
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
@@ -74,28 +127,123 @@ fun TigerAndDragonGameScreen(
         }
     }
 
-
-    // Simulate timer for preview/demo. Replace with your timer state in real app.
+    // Initial fetch
     LaunchedEffect(Unit) {
-        while (true) {
-            delay(1000)
-            timerValue = if (timerValue == 0) 3 else timerValue - 1
+        Log.d("TigerAndDragonGameScreen", "Initial fetch: Period ID and Game History.")
+        viewModel.fetchPeriodId()
+        viewModel.fetchGameHistory()
+    }
+
+    // UI Update for period ID
+    LaunchedEffect(Unit) {
+        viewModel.periodId.collect { resourceEvent ->
+            when (resourceEvent) {
+                is Resource.Success<*> -> {
+                    val response = resourceEvent.data
+                    // Only handle TigerPeriodIdResponse, not TigerPeriodIdResult
+                    if (response is com.weblite.kgf.data.TigerAndDragonDataClasses.TigerPeriodIdResponse && response.result != null && response.result.isNotEmpty()) {
+                        val datetime = response.result[0].periodId
+                        showPeriodId = datetime
+                        Log.d("TigerAndDragonGameScreen", "Period ID fetched: $datetime")
+                    } else {
+                        showPeriodId = "No Period Id Data"
+                        Log.w("TigerAndDragonGameScreen", "Period ID response empty, null, or wrong type.")
+                    }
+                }
+                is Resource.Error<*> -> {
+                    showPeriodId = "Error Fetching Period Id: ${resourceEvent.message}"
+                    Log.e("TigerAndDragonGameScreen", "Error fetching Period ID: ${resourceEvent.message}")
+                }
+                is Resource.Loading<*> -> {
+                    showPeriodId = "Fetching Period Id..."
+                    Log.d("TigerAndDragonGameScreen", "Fetching Period ID (Loading state).")
+                }
+                else -> {
+                    showPeriodId = "Unknown State"
+                }
+            }
         }
     }
 
-    // Show overlay for 1s when timer reaches 0 and resets to 30
-    LaunchedEffect(timerValue) {
-        if (timerValue == 0) {
-            showTigerOverlay = true
-            // Show overlay for 1 second, then hide and reset coin scale
-            scope.launch {
-                delay(1000)
-                showTigerOverlay = false
-                selectedChipIndex = -1
+    val timerEnded by viewModel.timerEnded.collectAsState()
+    var resultOverlayType by remember { mutableStateOf<String?>(null) } // "dragon", "tiger", "draw", or null
+
+    // Call bet API when timer reaches 5 seconds remaining, with duplicate prevention and correct amount check
+    var betSentDragon by remember { mutableStateOf(false) }
+    var betSentTiger by remember { mutableStateOf(false) }
+    var betSentTie by remember { mutableStateOf(false) }
+
+    LaunchedEffect(secondsRemaining) {
+        if (secondsRemaining == 5) {
+            Log.d("TigerAndDragonGameScreen", "[BET LOGIC] Timer reached 5s. Placing bets if any.")
+            val dragonSum = dragonAllCoins.sum()
+            val tigerSum = tigerAllCoins.sum()
+            val tieSum = tieAllCoins.sum() 
+            Log.d("TigerAndDragonGameScreen", "[BET AMOUNT] Dragon: $dragonSum, Tiger: $tigerSum, Tie: $tieSum")
+            // Only send bet if not already sent in this cycle and amount > 0
+            if (dragonSum > 0 && !betSentDragon) {
+                Log.d("TigerAndDragonGameScreen", "Calling placeBet for dragon with amount: $dragonSum")
+                viewModel.placeBet("dragon", dragonSum)
+                betSentDragon = true
             }
+            if (tigerSum > 0 && !betSentTiger) {
+                Log.d("TigerAndDragonGameScreen", "Calling placeBet for tiger with amount: $tigerSum")
+                viewModel.placeBet("tiger", tigerSum)
+                betSentTiger = true
+            }
+            if (tieSum > 0 && !betSentTie) {
+                Log.d("TigerAndDragonGameScreen", "Calling placeBet for tie with amount: $tieSum")
+                viewModel.placeBet("tie", tieSum)
+                betSentTie = true
+            }
+
+            // Clear coins after bet
+            dragonCoins = emptyList(); tigerCoins = emptyList(); tieCoins = emptyList();
+            dragonAllCoins = emptyList(); tigerAllCoins = emptyList(); tieAllCoins = emptyList();
+            selectedChipIndex = -1
         }
-        if (timerValue == 3) {
-            lastTimer = timerValue
+        // Reset sent flags when timer resets (i.e., when secondsRemaining increases again)
+        if (secondsRemaining > 5) {
+            betSentDragon = false
+            betSentTiger = false
+            betSentTie = false
+        }
+    }
+
+    // Show result overlay for 400ms after timer ends
+    LaunchedEffect(timerEnded) {
+        if (timerEnded) {
+            val latestResult = try {
+                val response = (gameHistoryState as? Resource.Success<*>)?.data
+                val historyList = when (response) {
+                    is TigerGameHistoryResponse -> response.result?.history
+                    is com.weblite.kgf.data.TigerAndDragonDataClasses.TigerGameHistoryResult -> response.history
+                    else -> null
+                }
+                var resultItem = historyList?.getOrNull(1)
+                var resultValue = resultItem?.result?.trim()?.lowercase()
+                Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] Second history item result: ${resultItem?.result}")
+                if (resultValue == null) {
+                    // Fallback to first item if second is null
+                    resultItem = historyList?.getOrNull(0)
+                    resultValue = resultItem?.result?.trim()?.lowercase()
+                    Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] Fallback to first history item result: ${resultItem?.result}")
+                }
+                when (resultValue) {
+                    "tiger" -> "tiger"
+                    "dragon" -> "dragon"
+                    "draw", "tie" -> "draw"
+                    else -> null
+                }
+            } catch (e: Exception) {
+                Log.e("TigerAndDragonGameScreen", "[OVERLAY LOGIC] Exception: ${e.message}")
+                null
+            }
+            resultOverlayType = latestResult
+            if (resultOverlayType != null) {
+                kotlinx.coroutines.delay(400)
+                resultOverlayType = null
+            }
         }
     }
 
@@ -153,29 +301,34 @@ fun TigerAndDragonGameScreen(
             }
         }
         // Main game area with lowest z-index
-        // --- State for placed coins in each section ---
-        val (dragonCoins, setDragonCoins) = remember { mutableStateOf(listOf<Int>()) }
-        val (tigerCoins, setTigerCoins) = remember { mutableStateOf(listOf<Int>()) }
-        val (tieCoins, setTieCoins) = remember { mutableStateOf(listOf<Int>()) }
-
-        // Define chipValues here so it's available for addCoinToSection
-        val chipValues = listOf(10, 50, 500, 1000, 5000)
-
-        // Helper to add coin to a section
-        fun addCoinToSection(section: String) {
-            val value = chipValues.getOrNull(selectedChipIndex) ?: return
-            when (section) {
-                "dragon" -> if (dragonCoins.size < 12) setDragonCoins(dragonCoins.plusElement(value))
-                "tiger" -> if (tigerCoins.size < 12) setTigerCoins(tigerCoins.plusElement(value))
-                "tie" -> if (tieCoins.size < 12) setTieCoins(tieCoins.plusElement(value))
-            }
-        }
-
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(1f) // Lowest z-index
         ) {
+            // Blur overlay when 5s remain
+            if (secondsRemaining in 1..5) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xAA000000))
+                        .zIndex(100f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.material3.Surface(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer { alpha = 0.7f },
+                        color = Color.Transparent
+                    ) {}
+                    Text(
+                        text = "Bet Placed",
+                        color = Color.White,
+                        fontSize = 32.sp,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+            }
             val overlayHeight = maxHeight * 0.75f
             val overlayWidth = maxWidth * 0.18f
 
@@ -820,7 +973,7 @@ fun TigerAndDragonGameScreen(
                 )
                 Spacer(modifier = Modifier.width(40.dp))
 
-                // Redesigned timer box
+                // Redesigned timer box - now uses ViewModel timer
                 Box(
                     modifier = Modifier
                         .background(
@@ -838,8 +991,9 @@ fun TigerAndDragonGameScreen(
                         .padding(horizontal = 38.dp, vertical = 18.dp),
                     contentAlignment = Alignment.Center
                 ) {
+                    // Use ViewModel timer instead of local timer
                     Text(
-                        text = timerValue.toString(),
+                        text = secondsRemaining.toString(),
                         color = Color(0xFF1B263B),
                         fontSize = 38.sp,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
@@ -878,8 +1032,8 @@ fun TigerAndDragonGameScreen(
             }
         }
 
-        // Tiger overlay when timer resets
-        if (showTigerOverlay) {
+        // Result overlay after timer ends (400ms)
+        if (resultOverlayType != null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -887,17 +1041,34 @@ fun TigerAndDragonGameScreen(
                     .zIndex(10f),
                 contentAlignment = Alignment.Center
             ) {
-                Image(
-                    painter = painterResource(R.drawable.tiger),
-                    contentDescription = "Tiger Overlay",
-                    modifier = Modifier.size(220.dp)
-                )
+                when (resultOverlayType) {
+                    "dragon" -> Image(
+                        painter = painterResource(R.drawable.dragon),
+                        contentDescription = "Dragon Overlay",
+                        modifier = Modifier.size(220.dp)
+                    )
+                    "tiger" -> Image(
+                        painter = painterResource(R.drawable.tiger),
+                        contentDescription = "Tiger Overlay",
+                        modifier = Modifier.size(220.dp)
+                    )
+                    "draw" -> Text(
+                        text = "Draw",
+                        color = Color.White,
+                        fontSize = 64.sp,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
             }
         }
 
         // MODIFIED: Conditionally display the GameHistoryDialogTigerAndDragon
         if (showHistoryDialog) {
-            GameHistoryDialogTigerAndDragon(onDismissRequest = { showHistoryDialog = false })
+            GameHistoryDialogTigerAndDragon(
+                onDismissRequest = { showHistoryDialog = false },
+                activeTab = activeTab,
+                onTabChange = { tab -> activeTab = tab }
+            )
         }
     }
 }

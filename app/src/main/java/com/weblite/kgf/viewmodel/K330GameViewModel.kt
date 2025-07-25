@@ -172,22 +172,17 @@ class K330GameViewModel @Inject constructor(
                     response.body()?.result?.history?.let { history ->
                         // Transform K330GameHistoryItem to K360GameHistoryItem for UI consistency
                         val transformedHistory = history.map { item ->
-                            val number = item.result
-                            val bigSmall = item.size
-                            val oddEven = try {
-                                val num = number.toInt()
-                                if (num % 2 == 0) "Even" else "Odd"
-                            } catch (e: NumberFormatException) {
-                                "N/A"
-                            }
+                            val number = if (item.bidNum.isNullOrBlank()) "Loading..." else item.bidNum
+                            val bigSmall = if (item.bidBigSmall.isNullOrBlank() && item.finalBidBigSmall.isNullOrBlank()) "Loading..." else (item.bidBigSmall ?: item.finalBidBigSmall ?: "")
+                            val oddEven = if (item.bidOddEven.isNullOrBlank() && item.finalBidOddEven.isNullOrBlank()) "Loading..." else (item.bidOddEven ?: item.finalBidOddEven ?: "")
                             K360GameHistoryItem(
-                                id = item.period, // Fixed: Provide a value for 'id'
-                                datetime = item.period,
-                                number = number,
-                                oddEven = oddEven,
-                                bigSmall = bigSmall,
-                                status = "", // Fixed: Provide a value for 'status'
-                                createdAt = "" // Fixed: Provide a value for 'createdAt'
+                                id = item.id ?: "",
+                                datetime = item.period ?: "",
+                                number = number ?: "Loading...",
+                                oddEven = oddEven ?: "Loading...",
+                                bigSmall = bigSmall ?: "Loading...",
+                                status = item.status ?: "Loading...",
+                                createdAt = item.currentDt ?: "Loading..."
                             )
                         }
 
@@ -247,23 +242,23 @@ class K330GameViewModel @Inject constructor(
                         // Transform K330MyHistoryItem to K360MyHistoryItem for UI consistency
                         val transformedHistory = history.map { item ->
                             K360MyHistoryItem(
-                                k60beatID = "", // Fixed: Provide a value for 'k60beatID'
-                                period = item.period,
-                                bidNum = item.bidNum,
-                                price = item.price,
-                                status = item.status,
-                                totalamount = item.totalamount,
-                                bidType = "",
-                                quantity = "",
-                                betChoiceStatus = "",
-                                betChoiceResult = "",
-                                winning_amount = "",
-                                adminWinStatus = "",
-                                adminWinBid = "",
-                                adminWinTotal = "",
-                                createdAt = "",
-                                boost = "", // Fixed: Provide a value for 'boost'
-                                userid = "" // Fixed: Provide a value for 'userid'
+                                k60beatID = item.id ?: "",
+                                period = item.period ?: "",
+                                bidNum = item.bidNum ?: "",
+                                price = item.price ?: "",
+                                status = item.status ?: "",
+                                totalamount = item.totalamount ?: "",
+                                bidType = item.bidType ?: "",
+                                quantity = item.quantity ?: "",
+                                betChoiceStatus = item.betChoiceStatus ?: "",
+                                betChoiceResult = item.betChoiceResult ?: "",
+                                winning_amount = item.calculatedTotalAmount?.toString() ?: "",
+                                adminWinStatus = item.adminWinStatus ?: "",
+                                adminWinBid = item.adminWinBid ?: "",
+                                adminWinTotal = item.adminWinTotal ?: "",
+                                createdAt = item.createdAt ?: "",
+                                boost = item.boost ?: "",
+                                userid = item.userid ?: ""
                             )
                         }
                         _k3MyHistory.value = Resource.Success(transformedHistory)

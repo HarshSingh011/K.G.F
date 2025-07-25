@@ -173,6 +173,13 @@ fun K3Ui30(
         }
     }
 
+    LaunchedEffect(showSuccessMessage) {
+        if (showSuccessMessage) {
+            delay(400)
+            showSuccessMessage = false
+        }
+    }
+
     // My History Data for K3 - Dynamically fetched from ViewModel and transformed
     val k3MyHistoryData = remember(myHistoryResource) {
         when (val resource = myHistoryResource) {

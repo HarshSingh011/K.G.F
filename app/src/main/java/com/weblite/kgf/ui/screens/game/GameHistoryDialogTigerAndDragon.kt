@@ -13,6 +13,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.weblite.kgf.viewmodel.TigerAndDragonViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import retrofit2.http.GET
+import retrofit2.http.Query
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import android.util.Log
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,79 +37,112 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-
-// Updated data class to include fields for "My History"
-data class GameHistoryItem(
-    val period: String,
-    val result: String, // For Game History tab (Tiger, Dragon, Draw, Running)
-    val betOn: Int? = null, // For My History tab (e.g., 1000, 500)
-    val coinType: String? = null, // For My History tab (e.g., Tiger, Dragon, Draw)
-    val winLossStatus: String? = null, // For My History tab (Win, Loss)
-    val winningAmount: Double? = null // For My History tab (e.g., 2000.00, 0.00)
-)
+import com.weblite.kgf.data.TigerAndDragonDataClasses.GameHistoryItem
 
 @Composable
-fun GameHistoryDialogTigerAndDragon(onDismissRequest: () -> Unit) {
-    var activeTab by remember { mutableStateOf("game-history") }
+fun GameHistoryDialogTigerAndDragon(
+    onDismissRequest: () -> Unit,
+    activeTab: String,
+    onTabChange: (String) -> Unit,
+    viewModel: TigerAndDragonViewModel = hiltViewModel()
+) {
     var currentPageGameHistory by remember { mutableStateOf(1) }
     var currentPageMyHistory by remember { mutableStateOf(1) }
 
-    // Mock data for Game History tab
-    val gameHistoryData = remember {
-        listOf(
-            GameHistoryItem("2507191217", "Running"),
-            GameHistoryItem("2507191216", "Dragon"),
-            GameHistoryItem("2507191215", "Tiger"),
-            GameHistoryItem("2507191214", "Tiger"),
-            GameHistoryItem("2507191213", "Dragon"),
-            GameHistoryItem("2507191212", "Dragon"),
-            GameHistoryItem("2507191211", "Dragon"),
-            GameHistoryItem("2507191210", "Draw"),
-            GameHistoryItem("2507191209", "Dragon"),
-            GameHistoryItem("2507191208", "Draw"),
-            GameHistoryItem("2507191207", "Tiger"),
-            GameHistoryItem("2507191206", "Dragon"),
-            GameHistoryItem("2507191205", "Tiger"),
-            GameHistoryItem("2507191204", "Draw"),
-            GameHistoryItem("2507191203", "Dragon"),
-            GameHistoryItem("2507191202", "Tiger"),
-        )
+    // Collect game history from ViewModel
+    val gameHistoryState by viewModel.gameHistory.collectAsState()
+    val gameHistoryData = remember(gameHistoryState) {
+        gameHistoryState?.result?.history?.map {
+            GameHistoryItem(
+                period = it.period,
+                result = it.result
+            )
+        } ?: emptyList()
     }
 
-    // Mock data for My History tab
-    val myHistoryData = remember {
-        listOf(
-            GameHistoryItem("2507191216", "Tiger", 1000, "Tiger", "Loss", 0.00),
-            GameHistoryItem("2507191216", "Tiger", 1000, "Tiger", "Loss", 0.00),
-            GameHistoryItem("2507191216", "Tiger", 1000, "Tiger", "Loss", 0.00),
-            GameHistoryItem("2507191216", "Tiger", 1000, "Tiger", "Loss", 0.00),
-            GameHistoryItem("2507191215", "Dragon", 500, "Dragon", "Loss", 0.00),
-            GameHistoryItem("2507081797", "Draw", 10, "Draw", "Loss", 0.00),
-            GameHistoryItem("2507081797", "Draw", 10, "Draw", "Loss", 0.00),
-            GameHistoryItem("2507081797", "Draw", 10, "Draw", "Loss", 0.00),
-            GameHistoryItem("2507191216", "Dragon", 1000, "Dragon", "Win", 2000.00),
-            GameHistoryItem("2507191216", "Tiger", 1000, "Tiger", "Loss", 0.00),
-            GameHistoryItem("2507191216", "Tiger", 1000, "Tiger", "Loss", 0.00),
-            GameHistoryItem("2507191216", "Tiger", 1000, "Tiger", "Loss", 0.00),
-            GameHistoryItem("2507191215", "Dragon", 500, "Dragon", "Loss", 0.00),
-            GameHistoryItem("2507081797", "Draw", 10, "Draw", "Loss", 0.00),
-            GameHistoryItem("2507081797", "Draw", 10, "Draw", "Loss", 0.00),
-            GameHistoryItem("2507081797", "Draw", 10, "Draw", "Loss", 0.00),
-        )
+    // Collect my history from ViewModel and map to table
+    val myHistoryState by viewModel.myHistory.collectAsState()
+
+    // Debug: Log raw myHistoryState when MyHistory tab is active
+    LaunchedEffect(activeTab, myHistoryState) {
+        if (activeTab == "my-history") {
+            Log.d("GameHistoryDialog", "Raw myHistoryState: ${myHistoryState}")
+            Log.d("GameHistoryDialog", "History result: ${myHistoryState?.result}")
+            Log.d("GameHistoryDialog", "History list size: ${myHistoryState?.result?.history?.size ?: 0}")
+        }
+    }
+
+    // Fixed: Access the nested history properly and map the actual API fields
+    val myHistoryData = remember(myHistoryState) {
+        val safeHistory = myHistoryState?.result?.history ?: emptyList()
+        Log.d("GameHistoryDialog", "Processing ${safeHistory.size} history items")
+
+        safeHistory.mapIndexed { index, item ->
+            Log.d("GameHistoryDialog", "Item $index: periodId=${item.periodId}, betChoice=${item.betChoice}, coins=${item.coins}, result=${item.result}, betChoiceResult=${item.betChoiceResult}")
+
+            // Map bet choice string to integer for display
+            val betOn = when (item.betChoice?.lowercase()) {
+                "tiger" -> 1
+                "dragon" -> 2
+                "tie", "draw" -> 3
+                else -> null
+            }
+
+            // Map result to win/loss status - use the 'result' field from API
+            val winLossStatus = when (item.result?.lowercase()) {
+                "win" -> "Win"
+                "loss" -> "Loss"
+                "running" -> "Running"
+                else -> item.result ?: "Unknown"
+            }
+
+            // Parse winning amount from totalamount field
+            val winningAmount = try {
+                item.totalAmount?.toDoubleOrNull() ?: 0.0
+            } catch (e: Exception) {
+                0.0
+            }
+
+            GameHistoryItem(
+                period = item.periodId ?: "",
+                betOn = betOn,
+                coinType = item.coins ?: "",
+                winLossStatus = winLossStatus,
+                winningAmount = winningAmount
+            )
+        }
     }
 
     val itemsPerPage = 8
 
-    val currentData = if (activeTab == "game-history") gameHistoryData else myHistoryData
+    // Use separate paging and visibleHistory for each tab to avoid mapping issues
+    val gameHistoryTotalPages = if (gameHistoryData.isEmpty()) 1 else (gameHistoryData.size + itemsPerPage - 1) / itemsPerPage
+    val myHistoryTotalPages = if (myHistoryData.isEmpty()) 1 else (myHistoryData.size + itemsPerPage - 1) / itemsPerPage
+    val gameHistoryStartIndex = (currentPageGameHistory - 1) * itemsPerPage
+    val gameHistoryEndIndex = (gameHistoryStartIndex + itemsPerPage).coerceAtMost(gameHistoryData.size)
+    val myHistoryStartIndex = (currentPageMyHistory - 1) * itemsPerPage
+    val myHistoryEndIndex = (myHistoryStartIndex + itemsPerPage).coerceAtMost(myHistoryData.size)
+    val gameHistoryVisible = if (gameHistoryData.isNotEmpty()) gameHistoryData.subList(gameHistoryStartIndex, gameHistoryEndIndex) else emptyList()
+    val myHistoryVisible = if (myHistoryData.isNotEmpty()) myHistoryData.subList(myHistoryStartIndex, myHistoryEndIndex) else emptyList()
+
+    val visibleHistory = if (activeTab == "game-history") gameHistoryVisible else myHistoryVisible
     val currentPage = if (activeTab == "game-history") currentPageGameHistory else currentPageMyHistory
+    val totalPages = if (activeTab == "game-history") gameHistoryTotalPages else myHistoryTotalPages
     val setCurrentPage: (Int) -> Unit = { newPage ->
         if (activeTab == "game-history") currentPageGameHistory = newPage else currentPageMyHistory = newPage
     }
 
-    val totalPages = (currentData.size + itemsPerPage - 1) / itemsPerPage
-    val startIndex = (currentPage - 1) * itemsPerPage
-    val endIndex = (startIndex + itemsPerPage).coerceAtMost(currentData.size)
-    val visibleHistory = currentData.subList(startIndex, endIndex)
+    // Tab-specific logic - handles initial calls and polling
+    LaunchedEffect(activeTab) {
+        Log.d("GameHistoryDialog", "Tab changed to: $activeTab")
+        if (activeTab == "game-history") {
+            viewModel.startGameHistoryPolling()
+            viewModel.fetchGameHistory() // Initial call when switching to game-history tab
+        } else {
+            viewModel.stopGameHistoryPolling()
+            viewModel.fetchMyHistory() // Initial call when switching to my-history tab
+        }
+    }
 
     Dialog(
         onDismissRequest = onDismissRequest,
@@ -153,14 +198,14 @@ fun GameHistoryDialogTigerAndDragon(onDismissRequest: () -> Unit) {
                         TabButton(
                             text = "Game History",
                             isSelected = activeTab == "game-history",
-                            onClick = { activeTab = "game-history" },
-                            modifier = Modifier.width(buttonWidth) // Apply calculated width
+                            onClick = { onTabChange("game-history") },
+                            modifier = Modifier.width(buttonWidth)
                         )
                         TabButton(
                             text = "My History",
                             isSelected = activeTab == "my-history",
-                            onClick = { activeTab = "my-history" },
-                            modifier = Modifier.width(buttonWidth) // Apply calculated width
+                            onClick = { onTabChange("my-history") },
+                            modifier = Modifier.width(buttonWidth)
                         )
                     }
                 }
@@ -177,60 +222,62 @@ fun GameHistoryDialogTigerAndDragon(onDismissRequest: () -> Unit) {
                         val availableWidth = (totalWidth.value - (columnPadding.value * 2)).dp
                         val columnWidth = (availableWidth.value / 2f).dp // Two equal columns
 
-                        // Table Header for Game History
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color(0xFFF0F0F0)) // Light gray header
-                                .padding(vertical = 8.dp, horizontal = columnPadding)
-                        ) {
-                            Text(
-                                text = "Period",
-                                modifier = Modifier.width(columnWidth), // Apply calculated width
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF666666),
-                                fontSize = 16.sp
-                            )
-                            Text(
-                                text = "Result",
-                                modifier = Modifier.width(columnWidth), // Apply calculated width
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF666666),
-                                fontSize = 16.sp
-                            )
-                        }
+                        Column {
+                            // Table Header for Game History
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFFF0F0F0)) // Light gray header
+                                    .padding(vertical = 8.dp, horizontal = columnPadding)
+                            ) {
+                                Text(
+                                    text = "Period",
+                                    modifier = Modifier.width(columnWidth), // Apply calculated width
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF666666),
+                                    fontSize = 16.sp
+                                )
+                                Text(
+                                    text = "Result",
+                                    modifier = Modifier.width(columnWidth), // Apply calculated width
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF666666),
+                                    fontSize = 16.sp
+                                )
+                            }
 
-                        // Table Body for Game History
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 300.dp)
-                        ) {
-                            itemsIndexed(visibleHistory) { index, item ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(if (index % 2 == 0) Color.White else Color(0xFFF9F9F9))
-                                        .padding(vertical = 8.dp, horizontal = columnPadding)
-                                ) {
-                                    Text(
-                                        text = item.period,
-                                        modifier = Modifier.width(columnWidth), // Apply calculated width
-                                        color = Color(0xFF333333),
-                                        fontSize = 15.sp
-                                    )
-                                    Text(
-                                        text = item.result,
-                                        modifier = Modifier.width(columnWidth), // Apply calculated width
-                                        color = when (item.result) {
-                                            "Dragon" -> Color(0xFF43A047) // Green
-                                            "Tiger" -> Color(0xFFED6A5A) // Red/Orange
-                                            "Draw" -> Color(0xFF4FC3F7) // Light Blue
-                                            else -> Color(0xFF666666)
-                                        },
-                                        fontWeight = FontWeight.Medium,
-                                        fontSize = 15.sp
-                                    )
+                            // Table Body for Game History
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 300.dp)
+                            ) {
+                                itemsIndexed(visibleHistory) { index, item ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(if (index % 2 == 0) Color.White else Color(0xFFF9F9F9))
+                                            .padding(vertical = 8.dp, horizontal = columnPadding)
+                                    ) {
+                                        Text(
+                                            text = item.period ?: "",
+                                            modifier = Modifier.width(columnWidth), // Apply calculated width
+                                            color = Color(0xFF333333),
+                                            fontSize = 15.sp
+                                        )
+                                        Text(
+                                            text = item.result ?: "",
+                                            modifier = Modifier.width(columnWidth), // Apply calculated width
+                                            color = when (item.result ?: "") {
+                                                "Dragon" -> Color(0xFF43A047) // Green
+                                                "Tiger" -> Color(0xFFED6A5A) // Red/Orange
+                                                "Draw" -> Color(0xFF4FC3F7) // Light Blue
+                                                else -> Color(0xFF666666)
+                                            },
+                                            fontWeight = FontWeight.Medium,
+                                            fontSize = 15.sp
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -238,122 +285,150 @@ fun GameHistoryDialogTigerAndDragon(onDismissRequest: () -> Unit) {
                 }
             } else { // My History tab content
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    // Use BoxWithConstraints to calculate column widths for My History table
-                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                        val totalWidth = maxWidth
-                        val columnPadding = 16.dp // Horizontal padding on the Row
-                        // Explicitly convert Dp to value, perform arithmetic, convert back to Dp
-                        val availableWidth = (totalWidth.value - (columnPadding.value * 2)).dp
-                        val totalWeightSum = 1f + 0.8f + 0.8f + 1f + 1.2f // Sum of original weights: 4.8f
+                    // Debug info: show item count
+                    Text(
+                        text = "MyHistory items: ${myHistoryData.size}",
+                        color = if (myHistoryData.isEmpty()) Color.Red else Color.Green,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
 
-                        // Explicitly convert Dp to value, perform arithmetic, convert back to Dp
-                        val periodWidth = ((1f / totalWeightSum) * availableWidth.value).dp
-                        val betOnCoinWidth = ((0.8f / totalWeightSum) * availableWidth.value).dp
-                        val winLossWidth = ((1f / totalWeightSum) * availableWidth.value).dp
-                        val winningAmountWidth = ((1.2f / totalWeightSum) * availableWidth.value).dp
-
-                        // Table Header for My History
-                        Row(
+                    if (myHistoryData.isEmpty()) {
+                        Text(
+                            text = "No betting history found.",
+                            color = Color.Gray,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color(0xFF43A047)) // Green header as per image
-                                .padding(vertical = 8.dp, horizontal = columnPadding)
-                        ) {
-                            Text(
-                                text = "Period",
-                                modifier = Modifier.width(periodWidth),
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                text = "Bes On",
-                                modifier = Modifier.width(betOnCoinWidth),
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                text = "Coin",
-                                modifier = Modifier.width(betOnCoinWidth),
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                text = "Win/Loss",
-                                modifier = Modifier.width(winLossWidth),
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                text = "Winning Amount",
-                                modifier = Modifier.width(winningAmountWidth),
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                textAlign = TextAlign.Center
-                            )
-                        }
+                                .padding(vertical = 32.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    } else {
+                        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                            val totalWidth = maxWidth
+                            val columnPadding = 16.dp
+                            val availableWidth = (totalWidth.value - (columnPadding.value * 2)).dp
+                            val totalWeightSum = 1f + 0.8f + 0.8f + 1f + 1.2f
 
-                        // Table Body for My History
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 300.dp)
-                        ) {
-                            itemsIndexed(visibleHistory) { index, item ->
+                            val periodWidth = ((1f / totalWeightSum) * availableWidth.value).dp
+                            val betOnCoinWidth = ((0.8f / totalWeightSum) * availableWidth.value).dp
+                            val winLossWidth = ((1f / totalWeightSum) * availableWidth.value).dp
+                            val winningAmountWidth = ((1.2f / totalWeightSum) * availableWidth.value).dp
+
+                            Column {
+                                // Table Header
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .background(if (index % 2 == 0) Color.White else Color(0xFFF9F9F9))
+                                        .background(Color(0xFF43A047))
                                         .padding(vertical = 8.dp, horizontal = columnPadding)
                                 ) {
                                     Text(
-                                        text = item.period,
+                                        text = "Period ID",
                                         modifier = Modifier.width(periodWidth),
-                                        color = Color(0xFF333333),
-                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.White,
+                                        fontSize = 14.sp,
                                         textAlign = TextAlign.Center
                                     )
                                     Text(
-                                        text = item.betOn?.toString() ?: "",
+                                        text = "Bet Choice",
                                         modifier = Modifier.width(betOnCoinWidth),
-                                        color = Color(0xFF333333),
-                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.White,
+                                        fontSize = 14.sp,
                                         textAlign = TextAlign.Center
                                     )
                                     Text(
-                                        text = item.coinType ?: "",
+                                        text = "Coin Type",
                                         modifier = Modifier.width(betOnCoinWidth),
-                                        color = Color(0xFF333333),
-                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.White,
+                                        fontSize = 14.sp,
                                         textAlign = TextAlign.Center
                                     )
                                     Text(
-                                        text = item.winLossStatus ?: "",
+                                        text = "Result",
                                         modifier = Modifier.width(winLossWidth),
-                                        color = when (item.winLossStatus) {
-                                            "Win" -> Color(0xFF43A047) // Green
-                                            "Loss" -> Color(0xFFED6A5A) // Red/Orange
-                                            else -> Color(0xFF666666)
-                                        },
-                                        fontWeight = FontWeight.Medium,
-                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.White,
+                                        fontSize = 14.sp,
                                         textAlign = TextAlign.Center
                                     )
                                     Text(
-                                        text = String.format("%.2f", item.winningAmount ?: 0.00),
+                                        text = "Total Amount",
                                         modifier = Modifier.width(winningAmountWidth),
-                                        color = Color(0xFF333333),
-                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.White,
+                                        fontSize = 14.sp,
                                         textAlign = TextAlign.Center
                                     )
+                                }
+
+                                // Table Body
+                                LazyColumn(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = 300.dp)
+                                ) {
+                                    itemsIndexed(visibleHistory) { index, item ->
+                                        // Map betOn to readable string if possible
+                                        val betChoice = when (item.betOn) {
+                                            1 -> "Tiger"
+                                            2 -> "Dragon"
+                                            3 -> "Draw"
+                                            else -> item.betOn?.toString() ?: "-"
+                                        }
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(if (index % 2 == 0) Color.White else Color(0xFFF9F9F9))
+                                                .padding(vertical = 8.dp, horizontal = columnPadding)
+                                        ) {
+                                            Text(
+                                                text = item.period.ifEmpty { "-" },
+                                                modifier = Modifier.width(periodWidth),
+                                                color = Color(0xFF333333),
+                                                fontSize = 13.sp,
+                                                textAlign = TextAlign.Center
+                                            )
+                                            Text(
+                                                text = betChoice,
+                                                modifier = Modifier.width(betOnCoinWidth),
+                                                color = Color(0xFF333333),
+                                                fontSize = 13.sp,
+                                                textAlign = TextAlign.Center
+                                            )
+                                            Text(
+                                                text = item.coinType?.ifEmpty { "-" } ?: "-",
+                                                modifier = Modifier.width(betOnCoinWidth),
+                                                color = Color(0xFF333333),
+                                                fontSize = 13.sp,
+                                                textAlign = TextAlign.Center
+                                            )
+                                            Text(
+                                                text = item.winLossStatus?.ifEmpty { "-" } ?: "-",
+                                                modifier = Modifier.width(winLossWidth),
+                                                color = when (item.winLossStatus ?: "") {
+                                                    "Win" -> Color(0xFF43A047)
+                                                    "Loss" -> Color(0xFFED6A5A)
+                                                    "Running" -> Color(0xFF2196F3)
+                                                    else -> Color(0xFF666666)
+                                                },
+                                                fontWeight = FontWeight.Medium,
+                                                fontSize = 13.sp,
+                                                textAlign = TextAlign.Center
+                                            )
+                                            Text(
+                                                text = if ((item.winningAmount ?: 0.0) > 0.0) String.format("₹%.2f", item.winningAmount) else "-",
+                                                modifier = Modifier.width(winningAmountWidth),
+                                                color = Color(0xFF333333),
+                                                fontSize = 13.sp,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -362,33 +437,35 @@ fun GameHistoryDialogTigerAndDragon(onDismissRequest: () -> Unit) {
             }
 
             // Pagination (common for both tabs)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                PaginationButton(
-                    text = "Previous",
-                    onClick = { setCurrentPage(currentPage - 1) },
-                    enabled = currentPage > 1,
-                    isPrimary = false
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = "Page $currentPage / $totalPages",
-                    color = Color(0xFF666666),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                PaginationButton(
-                    text = "Next",
-                    onClick = { setCurrentPage(currentPage + 1) },
-                    enabled = currentPage < totalPages,
-                    isPrimary = true
-                )
+            if (totalPages > 1) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    PaginationButton(
+                        text = "Previous",
+                        onClick = { setCurrentPage(currentPage - 1) },
+                        enabled = currentPage > 1,
+                        isPrimary = false
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = "Page $currentPage / $totalPages",
+                        color = Color(0xFF666666),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    PaginationButton(
+                        text = "Next",
+                        onClick = { setCurrentPage(currentPage + 1) },
+                        enabled = currentPage < totalPages,
+                        isPrimary = true
+                    )
+                }
             }
         }
     }

@@ -1,6 +1,7 @@
 // File: com.weblite.kgf.di.NetworkModule.kt
 package com.weblite.kgf.di
 
+import com.weblite.kgf.Api.TigerAndDragonApiService
 import com.weblite.kgf.Api2.ApiService
 import dagger.Module
 import dagger.Provides
@@ -15,6 +16,7 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
+    
 
     private const val BASE_URL = "https://newkgfindia.com/"
 
@@ -45,4 +47,9 @@ object NetworkModule {
     @Singleton
     fun provideApiService(retrofit: Retrofit): ApiService =
         retrofit.create(ApiService::class.java)
+
+    @Provides
+    @Singleton
+    fun provideTigerAndDragonApiService(retrofit: Retrofit): TigerAndDragonApiService =
+        retrofit.create(TigerAndDragonApiService::class.java)
 }
