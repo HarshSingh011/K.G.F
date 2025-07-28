@@ -1,4 +1,4 @@
-package com.weblite.kgf.ui.screens.game
+package com.weblite.kgf.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,8 +17,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -136,9 +138,16 @@ fun K330BettingPopupDialog(
             usePlatformDefaultWidth = false
         )
     ) {
+
+        val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+        val showAboveKeyboard = imeBottom > 0
+
         Box(
-            modifier = Modifier.fillMaxSize().padding(bottom = 90.dp),
-            contentAlignment = if (selectInputField) Alignment.Center else Alignment.BottomEnd
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding()
+                .padding(bottom = if (showAboveKeyboard) 40.dp else 100.dp),
+            contentAlignment = Alignment.BottomCenter
         ) {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState())
@@ -180,19 +189,24 @@ fun K330BettingPopupDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(35.dp)
-                            .background(bottomColor),
+                            .background(bottomColor)
+                            .padding(horizontal = 8.dp, vertical = 2.dp), // Add horizontal padding to prevent edge overflow
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
-                                .background(Color.White, RoundedCornerShape(6.dp))
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color.White)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .fillMaxHeight(), // Ensure it doesn't exceed parent height
                         ) {
                             Text(
                                 text = displayText,
                                 color = Color.Black,
                                 fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis // Prevent overflow
                             )
                         }
                     }

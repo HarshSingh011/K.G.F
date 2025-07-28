@@ -19,32 +19,32 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.weblite.kgf.R
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.zIndex
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.ui.graphics.graphicsLayer
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.util.Log
 import androidx.compose.material3.Text
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import com.weblite.kgf.ui.screens.game.GameHistoryDialogTigerAndDragon
 import com.weblite.kgf.viewmodel.TigerAndDragonViewModel
 import com.weblite.kgf.data.TigerAndDragonDataClasses.TigerGameHistoryResponse
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import android.widget.Toast // For showing messages
-import android.util.Log // Import for logging
 import com.weblite.kgf.Api2.Resource
-import kotlinx.coroutines.Job
+import com.weblite.kgf.PreviewInterface.ITigerAndDragonViewModel
+import com.weblite.kgf.data.TigerAndDragonDataClasses.TigerGameHistoryResult
+import com.weblite.kgf.data.TigerAndDragonDataClasses.TigerPeriodIdResponse
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+
 
 @Composable
 fun TigerAndDragonGameScreen(
@@ -52,6 +52,7 @@ fun TigerAndDragonGameScreen(
     onShowBottomBar: (Boolean) -> Unit,
     onBackClick: () -> Unit, // Added new parameter for back
     viewModel: TigerAndDragonViewModel = hiltViewModel(),
+//    viewModel: ITigerAndDragonViewModel
 ) {
     var showTigerOverlay by remember { mutableStateOf(false) }
     var showPeriodId by remember { mutableStateOf("") }
@@ -72,6 +73,9 @@ fun TigerAndDragonGameScreen(
     var tigerCoins by remember { mutableStateOf(listOf<Int>()) }
     var tieCoins by remember { mutableStateOf(listOf<Int>()) }
 
+    // State for my history
+    val myHistoryState by viewModel.myHistory.collectAsState(initial = null)
+
     // Track all coins placed (even those not visible)
     var dragonAllCoins by remember { mutableStateOf(listOf<Int>()) }
     var tigerAllCoins by remember { mutableStateOf(listOf<Int>()) }
@@ -80,27 +84,50 @@ fun TigerAndDragonGameScreen(
     // Define chipValues here so it's available for addCoinToSection
     val chipValues = listOf(10, 50, 500, 1000, 5000)
 
-    // Helper to add coin to a section (use section param)
+    // Popup state for bet placed
+    var showBetPlacedPopup by remember { mutableStateOf(false) }
+    var betPlacedText by remember { mutableStateOf("") }
+    var betPlacedPopupKey by remember { mutableStateOf(0) }
+
+    // Helper to add coin to a section and call bet API immediately
     fun addCoinToSection(section: String) {
         val value = chipValues.getOrNull(selectedChipIndex) ?: return
         when (section) {
             "dragon" -> {
                 dragonAllCoins = dragonAllCoins + value
-                dragonCoins = dragonAllCoins // Show all coins for correct sum
+                dragonCoins = dragonAllCoins
+                scope.launch {
+                    viewModel.placeBet("dragon", value)
+                    viewModel.fetchMyHistory()
+                }
+                betPlacedText = "Bet placed on Dragon: ₹$value"
+                showBetPlacedPopup = true
+                betPlacedPopupKey++
             }
             "tiger" -> {
                 tigerAllCoins = tigerAllCoins + value
                 tigerCoins = tigerAllCoins
+                scope.launch {
+                    viewModel.placeBet("tiger", value)
+                    viewModel.fetchMyHistory()
+                }
+                betPlacedText = "Bet placed on Tiger: ₹$value"
+                showBetPlacedPopup = true
+                betPlacedPopupKey++
             }
             "tie" -> {
                 tieAllCoins = tieAllCoins + value
                 tieCoins = tieAllCoins
+                scope.launch {
+                    viewModel.placeBet("tie", value)
+                    viewModel.fetchMyHistory()
+                }
+                betPlacedText = "Bet placed on Tie: ₹$value"
+                showBetPlacedPopup = true
+                betPlacedPopupKey++
             }
         }
-        val dragonSum = dragonAllCoins.sum()
-        val tigerSum = tigerAllCoins.sum()
-        val tieSum = tieAllCoins.sum()
-        Log.d("TigerAndDragonGameScreen", "Added coin $value to $section. Dragon: $dragonSum, Tiger: $tigerSum, Tie: $tieSum")
+        Log.d("TigerAndDragonGameScreen", "Placed coin $value on $section and called bet API.")
     }
 
     // Tab-specific logic for fetching data
@@ -165,85 +192,73 @@ fun TigerAndDragonGameScreen(
         }
     }
 
+
     val timerEnded by viewModel.timerEnded.collectAsState()
     var resultOverlayType by remember { mutableStateOf<String?>(null) } // "dragon", "tiger", "draw", or null
+    // Track last periodId for which overlay was shown
+    var lastShownPeriodId by remember { mutableStateOf<String?>(null) }
 
-    // Call bet API when timer reaches 5 seconds remaining, with duplicate prevention and correct amount check
-    var betSentDragon by remember { mutableStateOf(false) }
-    var betSentTiger by remember { mutableStateOf(false) }
-    var betSentTie by remember { mutableStateOf(false) }
-
-    LaunchedEffect(secondsRemaining) {
-        if (secondsRemaining == 5) {
-            Log.d("TigerAndDragonGameScreen", "[BET LOGIC] Timer reached 5s. Placing bets if any.")
-            val dragonSum = dragonAllCoins.sum()
-            val tigerSum = tigerAllCoins.sum()
-            val tieSum = tieAllCoins.sum() 
-            Log.d("TigerAndDragonGameScreen", "[BET AMOUNT] Dragon: $dragonSum, Tiger: $tigerSum, Tie: $tieSum")
-            // Only send bet if not already sent in this cycle and amount > 0
-            if (dragonSum > 0 && !betSentDragon) {
-                Log.d("TigerAndDragonGameScreen", "Calling placeBet for dragon with amount: $dragonSum")
-                viewModel.placeBet("dragon", dragonSum)
-                betSentDragon = true
-            }
-            if (tigerSum > 0 && !betSentTiger) {
-                Log.d("TigerAndDragonGameScreen", "Calling placeBet for tiger with amount: $tigerSum")
-                viewModel.placeBet("tiger", tigerSum)
-                betSentTiger = true
-            }
-            if (tieSum > 0 && !betSentTie) {
-                Log.d("TigerAndDragonGameScreen", "Calling placeBet for tie with amount: $tieSum")
-                viewModel.placeBet("tie", tieSum)
-                betSentTie = true
-            }
-
-            // Clear coins after bet
+    // Show result overlay only when periodId changes after timer ends
+    LaunchedEffect(timerEnded) {
+        if (timerEnded && showPeriodId != null && showPeriodId != lastShownPeriodId) {
             dragonCoins = emptyList(); tigerCoins = emptyList(); tieCoins = emptyList();
             dragonAllCoins = emptyList(); tigerAllCoins = emptyList(); tieAllCoins = emptyList();
             selectedChipIndex = -1
-        }
-        // Reset sent flags when timer resets (i.e., when secondsRemaining increases again)
-        if (secondsRemaining > 5) {
-            betSentDragon = false
-            betSentTiger = false
-            betSentTie = false
+            // Fetch game history for new period
+            Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] New periodId detected ($showPeriodId), fetching game history and waiting for update.")
+            var tries = 0
+            var historyList: List<Any>? = null
+            var periodValue: String? = null
+            while (tries < 10) { // Try for up to ~1 second (10 x 100ms)
+                viewModel.fetchGameHistory()
+                kotlinx.coroutines.delay(100)
+                historyList = gameHistoryState?.result?.history
+                if (!historyList.isNullOrEmpty()) {
+                    val periodField = try { historyList?.get(1)?.javaClass?.getDeclaredField("period") } catch (e: Exception) { null }
+                    periodValue = periodField?.let { it.isAccessible = true; it.get(historyList?.get(1))?.toString() }
+                    if (periodValue == showPeriodId) break
+                }
+                tries++
+            }
+            Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] History list (from ViewModel): $historyList")
+            Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] History list size: ${historyList?.size}")
+            val periodField = if (!historyList.isNullOrEmpty()) try { historyList?.get(1)?.javaClass?.getDeclaredField("period") } catch (e: Exception) { null } else null
+            periodValue = periodField?.let { it.isAccessible = true; it.get(historyList?.get(1))?.toString() }
+            if (historyList.isNullOrEmpty() || periodValue != showPeriodId) {
+                Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] No valid history for this period! Refetching data and showing 'no_result' overlay.")
+                viewModel.fetchGameHistory() // Try one more time to fetch
+                resultOverlayType = "no_result"
+                lastShownPeriodId = showPeriodId
+                return@LaunchedEffect
+            }
+            historyList?.forEachIndexed { idx, item ->
+                val res = try { item.javaClass.getDeclaredField("result").let { it.isAccessible = true; it.get(item)?.toString() } } catch (e: Exception) { null }
+                Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] history[$idx].result = $res")
+            }
+            // Always use the 0th index for result
+            val resultValue = try { historyList?.get(1)?.javaClass?.getDeclaredField("result")?.let { it.isAccessible = true; it.get(historyList?.get(1))?.toString()?.trim()?.lowercase() } } catch (e: Exception) { null }
+            Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] Used result value for overlay: $resultValue")
+            if (resultValue.isNullOrEmpty() || resultValue == "running") {
+                Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] No valid result found in history list! Showing 'no_result' overlay.")
+                resultOverlayType = "no_result"
+                lastShownPeriodId = showPeriodId
+                return@LaunchedEffect
+            }
+            when (resultValue) {
+                "tiger" -> resultOverlayType = "tiger"
+                "dragon" -> resultOverlayType = "dragon"
+                "draw", "tie" -> resultOverlayType = "draw"
+                else -> resultOverlayType = "no_result"
+            }
+            lastShownPeriodId = showPeriodId
         }
     }
 
-    // Show result overlay for 400ms after timer ends
-    LaunchedEffect(timerEnded) {
-        if (timerEnded) {
-            val latestResult = try {
-                val response = (gameHistoryState as? Resource.Success<*>)?.data
-                val historyList = when (response) {
-                    is TigerGameHistoryResponse -> response.result?.history
-                    is com.weblite.kgf.data.TigerAndDragonDataClasses.TigerGameHistoryResult -> response.history
-                    else -> null
-                }
-                var resultItem = historyList?.getOrNull(1)
-                var resultValue = resultItem?.result?.trim()?.lowercase()
-                Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] Second history item result: ${resultItem?.result}")
-                if (resultValue == null) {
-                    // Fallback to first item if second is null
-                    resultItem = historyList?.getOrNull(0)
-                    resultValue = resultItem?.result?.trim()?.lowercase()
-                    Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] Fallback to first history item result: ${resultItem?.result}")
-                }
-                when (resultValue) {
-                    "tiger" -> "tiger"
-                    "dragon" -> "dragon"
-                    "draw", "tie" -> "draw"
-                    else -> null
-                }
-            } catch (e: Exception) {
-                Log.e("TigerAndDragonGameScreen", "[OVERLAY LOGIC] Exception: ${e.message}")
-                null
-            }
-            resultOverlayType = latestResult
-            if (resultOverlayType != null) {
-                kotlinx.coroutines.delay(400)
-                resultOverlayType = null
-            }
+    // Hide overlay automatically after 300ms whenever it is shown
+    LaunchedEffect(resultOverlayType) {
+        if (resultOverlayType != null) {
+            delay(500)
+            resultOverlayType = null
         }
     }
 
@@ -260,6 +275,35 @@ fun TigerAndDragonGameScreen(
                 )
             )
     ) {
+        // Bet placed popup
+        if (showBetPlacedPopup) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 38.dp)
+                    .zIndex(100f),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                Box(
+                    modifier = Modifier
+                        .background(Color(0xFF1B263B), shape = RoundedCornerShape(24.dp))
+                        .border(2.dp, Color.White, RoundedCornerShape(24.dp))
+                        .padding(horizontal = 32.dp, vertical = 16.dp)
+                ) {
+                    Text(
+                        text = betPlacedText,
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+            }
+            // Hide popup after 1.2 seconds, using unique key for each placement
+            LaunchedEffect(betPlacedPopupKey) {
+                delay(400)
+                showBetPlacedPopup = false
+            }
+        }
         // Top bar with back button (left) and history button (right)
         Row(
             modifier = Modifier
@@ -321,12 +365,56 @@ fun TigerAndDragonGameScreen(
                             .graphicsLayer { alpha = 0.7f },
                         color = Color.Transparent
                     ) {}
-                    Text(
-                        text = "Bet Placed",
-                        color = Color.White,
-                        fontSize = 32.sp,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                }
+            }
+
+            // My History UI (simple mapping)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+                    .align(Alignment.TopCenter)
+                    .zIndex(5f),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("My History", color = Color.White, fontSize = 18.sp)
+                when (myHistoryState) {
+                    is Resource.Success<*> -> {
+                        val data = (myHistoryState as Resource.Success<*>).data
+                        val historyList = when (data) {
+                            is com.weblite.kgf.data.TigerAndDragonDataClasses.TigerGameHistoryResult -> data.history
+                            is com.weblite.kgf.data.TigerAndDragonDataClasses.TigerGameHistoryResponse -> data.result?.history
+                            else -> null
+                        }
+                        if (historyList != null && historyList.isNotEmpty()) {
+                            historyList.take(5).forEach { item ->
+                                val amount = try {
+                                    item.javaClass.getDeclaredField("amount").let { field ->
+                                        field.isAccessible = true
+                                        field.get(item)?.toString()
+                                    }
+                                } catch (e: Exception) {
+                                    null
+                                }
+                                Text(
+                                    text = "${item.result} | ₹${amount ?: "N/A"}",
+                                    color = Color.White,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        } else {
+                            Text("No history found", color = Color.Gray, fontSize = 14.sp)
+                        }
+                    }
+                    is Resource.Error<*> -> {
+                        Text("Error loading history", color = Color.Red, fontSize = 14.sp)
+                    }
+                    is Resource.Loading<*> -> {
+                        Text("Loading history...", color = Color.Gray, fontSize = 14.sp)
+                    }
+                    else -> {
+                        Text("No history", color = Color.Gray, fontSize = 14.sp)
+                    }
                 }
             }
             val overlayHeight = maxHeight * 0.75f
@@ -688,20 +776,20 @@ fun TigerAndDragonGameScreen(
             Box(
                 contentAlignment = Alignment.CenterEnd,
                 modifier = Modifier
-                    .height(overlayHeight * 1.0f) // taller so all chips fit
+                    .height(overlayHeight * 1.0f)
                     .width(overlayWidth * 1.5f)
-                    .padding(start = 1.dp, bottom = maxHeight * 0.13f) // Adjusted padding
+                    .padding(start = 1.dp, bottom = maxHeight * 0.13f)
                     .align(Alignment.BottomStart)
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    // Top: User 1
+                    // Top: User 1 (closer to table)
                     UserChip(
                         "User 1", 500.0, R.drawable.user1,
                         Modifier
                             .width(overlayWidth * 1.1f)
                             .wrapContentHeight()
                             .align(Alignment.TopEnd)
-                            .padding(top = overlayHeight * 0.02f, end = overlayWidth * 0.38f)
+                            .padding(top = overlayHeight * 0.02f, end = overlayWidth * 0.60f)
                     )
                     // Center: User 2
                     UserChip(
@@ -712,14 +800,14 @@ fun TigerAndDragonGameScreen(
                             .align(Alignment.CenterEnd)
                             .padding(end = overlayWidth * 0.80f)
                     )
-                    // Bottom: User 3
+                    // Bottom: User 3 (closer to table)
                     UserChip(
                         "User 3", 100.0, R.drawable.user3,
                         Modifier
                             .width(overlayWidth * 1.1f)
                             .wrapContentHeight()
                             .align(Alignment.BottomEnd)
-                            .padding(bottom = overlayHeight * 0.02f, end = overlayWidth * 0.48f)
+                            .padding(bottom = overlayHeight * 0.02f, end = overlayWidth * 0.60f)
                     )
                 }
             }
@@ -728,20 +816,20 @@ fun TigerAndDragonGameScreen(
             Box(
                 contentAlignment = Alignment.CenterStart,
                 modifier = Modifier
-                    .height(overlayHeight * 1.0f) // taller so all chips fit
+                    .height(overlayHeight * 1.0f)
                     .width(overlayWidth * 1.5f)
-                    .padding(end = 1.dp, bottom = maxHeight * 0.16f) // Adjusted padding
+                    .padding(end = 1.dp, bottom = maxHeight * 0.16f)
                     .align(Alignment.BottomEnd)
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    // Top: User 4
+                    // Top: User 4 (closer to table)
                     UserChip(
                         "User 4", 500.0, R.drawable.user4,
                         Modifier
                             .width(overlayWidth * 1.1f)
                             .wrapContentHeight()
                             .align(Alignment.TopStart)
-                            .padding(top = overlayHeight * 0.02f, start = overlayWidth * 0.38f)
+                            .padding(top = overlayHeight * 0.02f, start = overlayWidth * 0.60f)
                     )
                     // Center: User 5
                     UserChip(
@@ -752,14 +840,14 @@ fun TigerAndDragonGameScreen(
                             .align(Alignment.CenterStart)
                             .padding(start = overlayWidth * 0.80f)
                     )
-                    // Bottom: User 6
+                    // Bottom: User 6 (closer to table)
                     UserChip(
                         "User 6", 100.0, R.drawable.user6,
                         Modifier
                             .width(overlayWidth * 1.1f)
                             .wrapContentHeight()
-                            .align(Alignment.BottomEnd)
-                            .padding(bottom = overlayHeight * 0.02f, start = overlayWidth * 0.38f)
+                            .align(Alignment.BottomStart)
+                            .padding(bottom = overlayHeight * 0.02f, start = overlayWidth * 0.60f)
                     )
                 }
             }
@@ -777,7 +865,7 @@ fun TigerAndDragonGameScreen(
                     modifier = Modifier
                         .padding(horizontal = this@BoxWithConstraints.maxWidth * 0.10f)
                         .fillMaxWidth(0.80f)
-                        .height(48.dp)
+                        .height(55.dp)
                         .background(
                             Brush.horizontalGradient(
                                 colors = listOf(
@@ -859,8 +947,8 @@ fun TigerAndDragonGameScreen(
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.48f)
-                    .height(44.dp)
+                    .fillMaxWidth(0.60f)
+                    .height(60.dp)
                     .background(
                         Brush.horizontalGradient(
                             colors = listOf(
@@ -868,15 +956,15 @@ fun TigerAndDragonGameScreen(
                                 Color(0xFFB39DDB)
                             )
                         ),
-                        shape = RoundedCornerShape(22.dp)
+                        shape = RoundedCornerShape(40.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 6.dp),
-                    horizontalArrangement = Arrangement.Center
+                        .padding(vertical = 6.dp, horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterHorizontally)
                 ) {
                     val chipImages = listOf(
                         R.drawable.chip_10,
@@ -890,37 +978,23 @@ fun TigerAndDragonGameScreen(
                     chipValues.forEachIndexed { idx, value ->
                         val isSelected = idx == selectedChipIndex
                         val scale by animateFloatAsState(
-                            targetValue = if (isSelected) 1.3f else 1f,
+                            targetValue = if (isSelected) 1.2f else 1f,
                             label = "chipScale"
                         )
                         Box(
                             modifier = Modifier
-                                .padding(horizontal = 6.dp)
-                                .size(36.dp)
+                                .size(34.dp)
                                 .graphicsLayer {
                                     scaleX = scale
                                     scaleY = scale
                                 }
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = when (value) {
-                                            10 -> listOf(Color(0xFFED6A5A), Color(0xFFF7B267))
-                                            50 -> listOf(Color(0xFF3CB371), Color(0xFFB2F7EF))
-                                            500 -> listOf(Color(0xFF4FC3F7), Color(0xFFB39DDB))
-                                            1000 -> listOf(Color(0xFFD1B06B), Color(0xFFB39DDB))
-                                            5000 -> listOf(Color(0xFF415A77), Color(0xFFB39DDB))
-                                            else -> listOf(Color.LightGray, Color.Gray)
-                                        }
-                                    ),
-                                    shape = CircleShape
-                                )
                                 .clickable { selectedChipIndex = idx },
                             contentAlignment = Alignment.Center
                         ) {
                             Image(
                                 painter = painterResource(chipImages[idx % chipImages.size]),
                                 contentDescription = "Chip $value",
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(54.dp)
                             )
                         }
                     }
@@ -1058,6 +1132,12 @@ fun TigerAndDragonGameScreen(
                         fontSize = 64.sp,
                         modifier = Modifier.align(Alignment.Center)
                     )
+                    "no_result" -> Text(
+                        text = "No Result",
+                        color = Color.Gray,
+                        fontSize = 48.sp,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
                 }
             }
         }
@@ -1123,12 +1203,29 @@ fun UserChip(userName: String, amount: Double, avatarRes: Int, modifier: Modifie
     }
 }
 
-@Preview(showBackground = true, widthDp = 800, heightDp = 480)
-@Composable
-fun TigerAndDragonGameScreenPreview() {
-    TigerAndDragonGameScreen(
-        onShowTopBar = {},
-        onShowBottomBar = {},
-        onBackClick = {} // Provide a dummy lambda for preview
-    )
+
+class PreviewTigerAndDragonViewModel : ITigerAndDragonViewModel {
+    override val secondsRemaining: StateFlow<Int> = MutableStateFlow(10)
+    override val gameHistory: StateFlow<Resource<TigerGameHistoryResponse?>> =
+        MutableStateFlow(Resource.Success(TigerGameHistoryResponse(result = null, status = "", statusCode = 200, msg = "")))
+    override val timerEnded: StateFlow<Boolean> = MutableStateFlow(false)
+    override val periodId: SharedFlow<Resource<TigerPeriodIdResponse>> = MutableSharedFlow()
+    override fun startGameHistoryPolling() {}
+    override fun fetchGameHistory() {}
+    override fun stopGameHistoryPolling() {}
+    override fun fetchMyHistory() {}
+    override fun fetchPeriodId() {}
+    override fun placeBet(type: String, amount: Int) {}
 }
+
+//@Preview(showBackground = true, widthDp = 800, heightDp = 480)
+//@Composable
+//fun TigerAndDragonGameScreenPreview() {
+//    val mockViewModel = PreviewTigerAndDragonViewModel()
+//    TigerAndDragonGameScreen(
+//        onShowTopBar = {},
+//        onShowBottomBar = {},
+//        onBackClick = {},
+//        viewModel = mockViewModel
+//    )
+//}

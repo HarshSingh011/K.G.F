@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Scaffold
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -200,7 +201,7 @@ fun Wingo60Screen(
         // Also, the ViewModel's init block starts game history polling by default.
     }
 
-    androidx.compose.material.Scaffold(
+    Scaffold(
         topBar = {
             TopAppBar(
                 modifier = Modifier.height(52.dp),

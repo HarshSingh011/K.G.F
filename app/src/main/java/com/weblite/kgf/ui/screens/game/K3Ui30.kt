@@ -43,9 +43,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -75,7 +73,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.weblite.kgf.Api2.Resource
 import com.example.weblite.components.CompactExcelTableforK3
 import com.example.weblite.components.MyHistoryTableforK3
-import com.weblite.kgf.ui.screens.game.K330BettingPopupDialog // Use K330 Betting Dialog
+import com.weblite.kgf.ui.components.K330BettingPopupDialog // Use K330 Betting Dialog
 import kotlinx.coroutines.delay
 
 
@@ -670,7 +668,7 @@ fun K3Ui30(
                         // Refresh My History after a successful bet
                         viewModel.fetchK3MyHistory() // Call fetch on K330GameViewModel
                     } else {
-                        android.util.Log.e("K3Ui30", "Bet placement failed: $errorMessage")
+                        Log.e("K3Ui30", "Bet placement failed: $errorMessage")
                     }
                 }
             )

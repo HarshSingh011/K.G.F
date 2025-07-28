@@ -1,0 +1,20 @@
+package com.weblite.kgf.PreviewInterface
+
+import com.weblite.kgf.Api2.Resource
+import com.weblite.kgf.data.TigerAndDragonDataClasses.TigerGameHistoryResponse
+import com.weblite.kgf.data.TigerAndDragonDataClasses.TigerPeriodIdResponse
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+
+interface ITigerAndDragonViewModel {
+    val secondsRemaining: StateFlow<Int>
+    val gameHistory: StateFlow<Resource<TigerGameHistoryResponse?>>
+    val timerEnded: StateFlow<Boolean>
+    val periodId: SharedFlow<Resource<TigerPeriodIdResponse>>
+    fun startGameHistoryPolling()
+    fun fetchGameHistory()
+    fun stopGameHistoryPolling()
+    fun fetchMyHistory()
+    fun fetchPeriodId()
+    fun placeBet(type: String, amount: Int)
+}
