@@ -93,7 +93,41 @@ fun K3Ui30(
     var showBettingPopup by remember { mutableStateOf(false) }
     var selectedNumberForBetting by remember { mutableStateOf<Int?>(null) }
     var selectedBetTypeForBetting by remember { mutableStateOf<String?>(null) }
-    var totalBalance by remember { mutableStateOf(17436677.65) }
+    var totalBalance by remember { mutableStateOf(0.0) }
+    var balanceString by remember { mutableStateOf("0.00") }
+    var lastGoodBalanceString by remember { mutableStateOf("0.00") }
+    // --- Dashboard State ---
+    val mainViewModel: com.weblite.kgf.Api2.MainViewModel = hiltViewModel()
+    val dashboardState = mainViewModel.dashboardState.value
+    val userId = com.weblite.kgf.Api2.SharedPrefManager.getString("user_id", "0")
+
+    // Fetch dashboard data when screen is first composed
+    LaunchedEffect(Unit) {
+        mainViewModel.fetchDashboard(userId)
+    }
+
+    // Update wallet balance on dashboardState change
+    LaunchedEffect(dashboardState) {
+        val successState = dashboardState as? com.weblite.kgf.Api2.Resource.Success<*>
+        val data = successState?.data
+        val validBalance = try {
+            val resultField = data?.javaClass?.getDeclaredField("result")
+            resultField?.isAccessible = true
+            val resultObj = resultField?.get(data)
+            val totalBalanceField = resultObj?.javaClass?.getDeclaredField("totalBalance")
+            totalBalanceField?.isAccessible = true
+            totalBalanceField?.get(resultObj) as? String
+        } catch (e: Exception) {
+            null
+        }
+        if (validBalance != null && validBalance != "0.00") {
+            balanceString = validBalance
+            lastGoodBalanceString = validBalance
+            totalBalance = validBalance.toDoubleOrNull() ?: 0.0
+        } else {
+            balanceString = lastGoodBalanceString
+        }
+    }
     var showSuccessMessage by remember { mutableStateOf(false) }
 
     // --- Win Dialog State ---
@@ -153,6 +187,14 @@ fun K3Ui30(
     val context = LocalContext.current
 
     val showCountdownOverlay = timeRemaining <= 5000L && timeRemaining > 0L
+    // Fetch dashboard after timer completes (when timeRemaining resets)
+    var lastTimeRemaining by remember { mutableStateOf(timeRemaining) }
+    LaunchedEffect(timeRemaining) {
+        if (lastTimeRemaining < timeRemaining) {
+            mainViewModel.fetchDashboard(userId)
+        }
+        lastTimeRemaining = timeRemaining
+    }
 
     LaunchedEffect(showCountdownOverlay) {
         if (showCountdownOverlay && showBettingPopup) {
@@ -313,7 +355,7 @@ fun K3Ui30(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "₹ ${String.format("%,.2f", totalBalance)}",
+                                text = "₹ $balanceString",
                                 fontSize = 24.sp,
                                 fontWeight = Bold,
                                 color = Color.Black
@@ -711,6 +753,8 @@ fun K3Ui30(
                     if (isSuccess) {
                         showSuccessMessage = true
                         viewModel.fetchK3MyHistory()
+                        // Fetch dashboard after bet placed
+                        mainViewModel.fetchDashboard(userId)
                     } else {
                         Log.e("K3Ui30", "Bet placement failed: $errorMessage")
                     }

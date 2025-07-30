@@ -76,29 +76,8 @@ import com.weblite.kgf.viewmodel.Wingo60GameViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import android.util.Log
-
-//data class NumberItem(
-//    val number: Int,
-//    val backgroundColor: Color,
-//    val textColor: Color = Color.White
-//)
-//
-//// Function to get drawable resource for numbers
-//fun getNumberDrawable(number: Int): Int {
-//    return when (number) {
-//        0 -> R.drawable.zero
-//        1 -> R.drawable.one
-//        2 -> R.drawable.two
-//        3 -> R.drawable.three
-//        4 -> R.drawable.four
-//        5 -> R.drawable.five
-//        6 -> R.drawable.six
-//        7 -> R.drawable.seven
-//        8 -> R.drawable.eight
-//        9 -> R.drawable.nine
-//        else -> R.drawable.one
-//    }
-//}
+import com.weblite.kgf.Api2.MainViewModel
+import com.weblite.kgf.Api2.SharedPrefManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,8 +85,15 @@ fun Wingo60Screen(
     onBackClick: () -> Unit = {},
     onShowTopBar: (Boolean) -> Unit,
     onShowBottomBar: (Boolean) -> Unit,
-    viewModel: Wingo60GameViewModel = hiltViewModel()
+    viewModel: Wingo60GameViewModel = hiltViewModel(),
+    mainViewModel: MainViewModel = hiltViewModel()
 ) {
+    val dashboardState = mainViewModel.dashboardState.value
+    val userId = SharedPrefManager.getString("user_id", "0")
+    var totalBalance by remember { mutableStateOf(0.0) }
+    var balanceString by remember { mutableStateOf("0.00") }
+    var lastGoodBalanceString by remember { mutableStateOf("0.00") }
+
     var selectedColor by remember { mutableStateOf("") }
     var selectedNumbers by remember { mutableStateOf(setOf<Int>()) }
     var selectedColors by remember { mutableStateOf(setOf<String>()) }
@@ -116,7 +102,6 @@ fun Wingo60Screen(
     var showBettingPopup by remember { mutableStateOf(false) }
     var selectedNumberForBetting by remember { mutableStateOf(0) }
     var selectedNumberBackgroundColor by remember { mutableStateOf<Color?>(null) }
-    var totalBalance by remember { mutableStateOf(17510970.65) }
     var showSuccessMessage by remember { mutableStateOf(false) }
     var selectedColorForBetting by remember { mutableStateOf("Green") }
     var colorSelected by remember { mutableStateOf(false) }
@@ -134,6 +119,35 @@ fun Wingo60Screen(
     var showWinDialog by remember { mutableStateOf(false) }
     var winDialogData by remember { mutableStateOf<com.weblite.kgf.data.Wingo30SecDataClasses.BettingGameResultResponse?>(null) }
     val popupHistoryResponse by viewModel.popupHistoryResponse.collectAsStateWithLifecycle()
+
+    // Fetch dashboard data when screen is first composed
+    LaunchedEffect(Unit) {
+        mainViewModel.fetchDashboard(userId)
+    }
+
+    LaunchedEffect(dashboardState) {
+        // Only update UI if dashboardState is Resource.Success and has a valid balance
+        val successState = dashboardState as? Resource.Success<*>
+        val data = successState?.data
+        val validBalance = try {
+            val resultField = data?.javaClass?.getDeclaredField("result")
+            resultField?.isAccessible = true
+            val resultObj = resultField?.get(data)
+            val totalBalanceField = resultObj?.javaClass?.getDeclaredField("totalBalance")
+            totalBalanceField?.isAccessible = true
+            totalBalanceField?.get(resultObj) as? String
+        } catch (e: Exception) {
+            null
+        }
+        if (validBalance != null && validBalance != "0.00" && validBalance != lastGoodBalanceString) {
+            balanceString = validBalance
+            lastGoodBalanceString = validBalance
+            totalBalance = validBalance.toDoubleOrNull() ?: 0.0
+        } else if (validBalance == null || validBalance == "0.00") {
+            // If loading, error, or 0.00, keep showing last known good balance
+            balanceString = lastGoodBalanceString
+        }
+    }
 
     // --- Show Win Dialog based on result.total_winning_amount ---
     LaunchedEffect(popupHistoryResponse) {
@@ -256,6 +270,16 @@ fun Wingo60Screen(
     val showCountdownOverlay = timeRemaining <= 10 && timeRemaining > 0
     val coroutineScope = rememberCoroutineScope()
 
+    // Fetch dashboard after timer completes (when timeRemaining resets to 60)
+    var lastTimeRemaining by remember { mutableStateOf(timeRemaining) }
+    LaunchedEffect(timeRemaining) {
+        if (lastTimeRemaining < timeRemaining) {
+            // Timer reset, fetch dashboard
+            mainViewModel.fetchDashboard(userId)
+        }
+        lastTimeRemaining = timeRemaining
+    }
+
     LaunchedEffect(showCountdownOverlay) {
         if (showCountdownOverlay && showBettingPopup) {
             Log.d("Wingo60Screen", "Auto-closing betting dialog due to countdown overlay")
@@ -266,7 +290,7 @@ fun Wingo60Screen(
 
     LaunchedEffect(showSuccessMessage) {
         if (showSuccessMessage) {
-            delay(400)
+            delay(300)
             showSuccessMessage = false
         }
     }
@@ -339,7 +363,7 @@ fun Wingo60Screen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "₹ ${String.format("%,.2f", totalBalance)}",
+                            text = "₹ $balanceString",
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.Black
@@ -350,7 +374,6 @@ fun Wingo60Screen(
                             color = Color.Gray,
                             modifier = Modifier.padding(top = 8.dp)
                         )
-
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -793,6 +816,8 @@ fun Wingo60Screen(
                     showSuccessMessage = true
                     colorSelected = false
                     viewModel.fetchMyHistory()
+                    // Fetch dashboard after bet placed
+                    mainViewModel.fetchDashboard(userId)
                 }
             )
         }

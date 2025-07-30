@@ -93,7 +93,54 @@ fun K3Ui60(
     var showBettingPopup by remember { mutableStateOf(false) }
     var selectedNumberForBetting by remember { mutableStateOf<Int?>(null) }
     var selectedBetTypeForBetting by remember { mutableStateOf<String?>(null) }
-    var totalBalance by remember { mutableStateOf(17436677.65) }
+    // --- Game Period & Timer State (from viewModel) ---
+    val k3PeriodId by viewModel.k3PeriodId.collectAsStateWithLifecycle()
+    val timeRemaining by viewModel.k3TimeRemaining.collectAsStateWithLifecycle()
+
+    // --- Wallet State ---
+    val mainViewModel: com.weblite.kgf.Api2.MainViewModel = hiltViewModel()
+    val dashboardState = mainViewModel.dashboardState.value
+    val userId = com.weblite.kgf.Api2.SharedPrefManager.getString("user_id", "0")
+    var totalBalance by remember { mutableStateOf(0.0) }
+    var balanceString by remember { mutableStateOf("0.00") }
+    var lastGoodBalanceString by remember { mutableStateOf("0.00") }
+
+    // Fetch dashboard data when screen is first composed
+    LaunchedEffect(Unit) {
+        mainViewModel.fetchDashboard(userId)
+    }
+
+    // Update wallet balance from dashboardState
+    LaunchedEffect(dashboardState) {
+        val successState = dashboardState as? com.weblite.kgf.Api2.Resource.Success<*>
+        val data = successState?.data
+        val validBalance = try {
+            val resultField = data?.javaClass?.getDeclaredField("result")
+            resultField?.isAccessible = true
+            val resultObj = resultField?.get(data)
+            val totalBalanceField = resultObj?.javaClass?.getDeclaredField("totalBalance")
+            totalBalanceField?.isAccessible = true
+            totalBalanceField?.get(resultObj) as? String
+        } catch (e: Exception) {
+            null
+        }
+        if (validBalance != null && validBalance != "0.00") {
+            balanceString = validBalance
+            lastGoodBalanceString = validBalance
+            totalBalance = validBalance.toDoubleOrNull() ?: 0.0
+        } else {
+            balanceString = lastGoodBalanceString
+        }
+    }
+
+    // Fetch dashboard after timer completes (when timeRemaining increases, i.e., period reset)
+    var lastTimeRemaining by remember { mutableStateOf(0L) }
+    LaunchedEffect(timeRemaining) {
+        if (lastTimeRemaining < timeRemaining) {
+            mainViewModel.fetchDashboard(userId)
+        }
+        lastTimeRemaining = timeRemaining
+    }
     var showSuccessMessage by remember { mutableStateOf(false) }
 
     // --- Win Dialog State ---
@@ -142,8 +189,7 @@ fun K3Ui60(
         )
     }
 
-    val k3PeriodId by viewModel.k3PeriodId.collectAsStateWithLifecycle()
-    val timeRemaining by viewModel.k3TimeRemaining.collectAsStateWithLifecycle()
+    // ...existing code...
 
     val gameHistoryResource by viewModel.k3GameHistory.collectAsStateWithLifecycle()
     val myHistoryResource by viewModel.k3MyHistory.collectAsStateWithLifecycle()
@@ -313,7 +359,7 @@ fun K3Ui60(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "₹ ${String.format("%,.2f", totalBalance)}",
+                                text = "₹ $balanceString",
                                 fontSize = 24.sp,
                                 fontWeight = Bold,
                                 color = Color.Black
@@ -721,6 +767,7 @@ fun K3Ui60(
                     if (isSuccess) {
                         showSuccessMessage = true
                         viewModel.fetchK3MyHistory()
+                        mainViewModel.fetchDashboard(userId)
                     } else {
                         android.util.Log.e("K3Ui60", "Bet placement failed: $errorMessage")
                     }
