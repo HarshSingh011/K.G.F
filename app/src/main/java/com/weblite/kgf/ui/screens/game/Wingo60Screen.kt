@@ -32,7 +32,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,7 +58,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.weblite.components.Wingo60BettingPopupDialog // Updated import
+import com.example.weblite.components.Wingo60BettingPopupDialog
 import com.example.weblite.components.BigSmallButton
 import com.example.weblite.components.ColorButton
 import com.example.weblite.components.CompactExcelTableforWingo
@@ -72,10 +71,34 @@ import com.weblite.kgf.ui.screens.KGFLogoText
 import com.weblite.kgf.R
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.weblite.kgf.Api2.Resource // Import the Resource sealed class
+import com.weblite.kgf.Api2.Resource
 import com.weblite.kgf.viewmodel.Wingo60GameViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import android.util.Log
+
+//data class NumberItem(
+//    val number: Int,
+//    val backgroundColor: Color,
+//    val textColor: Color = Color.White
+//)
+//
+//// Function to get drawable resource for numbers
+//fun getNumberDrawable(number: Int): Int {
+//    return when (number) {
+//        0 -> R.drawable.zero
+//        1 -> R.drawable.one
+//        2 -> R.drawable.two
+//        3 -> R.drawable.three
+//        4 -> R.drawable.four
+//        5 -> R.drawable.five
+//        6 -> R.drawable.six
+//        7 -> R.drawable.seven
+//        8 -> R.drawable.eight
+//        9 -> R.drawable.nine
+//        else -> R.drawable.one
+//    }
+//}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,7 +116,7 @@ fun Wingo60Screen(
     var showBettingPopup by remember { mutableStateOf(false) }
     var selectedNumberForBetting by remember { mutableStateOf(0) }
     var selectedNumberBackgroundColor by remember { mutableStateOf<Color?>(null) }
-    var totalBalance by remember { mutableStateOf(17510970.65) } // This should ideally come from a ViewModel or user session
+    var totalBalance by remember { mutableStateOf(17510970.65) }
     var showSuccessMessage by remember { mutableStateOf(false) }
     var selectedColorForBetting by remember { mutableStateOf("Green") }
     var colorSelected by remember { mutableStateOf(false) }
@@ -105,7 +128,61 @@ fun Wingo60Screen(
     // Observe history data from ViewModel
     val gameHistoryResource by viewModel.gameHistoryResponse.collectAsStateWithLifecycle()
     val myHistoryResource by viewModel.myHistoryResponse.collectAsStateWithLifecycle()
-    val selectedHistoryTab by viewModel.selectedHistoryTab.collectAsStateWithLifecycle() // Observe selected tab
+    val selectedHistoryTab by viewModel.selectedHistoryTab.collectAsStateWithLifecycle()
+
+    // --- Win Dialog State (new logic) ---
+    var showWinDialog by remember { mutableStateOf(false) }
+    var winDialogData by remember { mutableStateOf<com.weblite.kgf.data.Wingo30SecDataClasses.BettingGameResultResponse?>(null) }
+    val popupHistoryResponse by viewModel.popupHistoryResponse.collectAsStateWithLifecycle()
+
+    // --- Show Win Dialog based on result.total_winning_amount ---
+    LaunchedEffect(popupHistoryResponse) {
+        Log.d("Wingo60WinDialog", "popupHistoryResponse: $popupHistoryResponse")
+        val winAmount = popupHistoryResponse?.result?.total_winning_amount?.toDoubleOrNull() ?: 0.0
+        Log.d("Wingo60WinDialog", "total_winning_amount: $winAmount")
+        if (winAmount > 0.0) {
+            winDialogData = popupHistoryResponse
+            showWinDialog = true
+            Log.d("Wingo60WinDialog", "Showing Win Dialog, total_winning_amount: $winAmount")
+            delay(2000)
+            showWinDialog = false
+        } else {
+            showWinDialog = false
+            Log.d("Wingo60WinDialog", "Not showing Win Dialog, total_winning_amount: $winAmount")
+        }
+    }
+
+    // --- Win Dialog Appear (new logic) ---
+    if (showWinDialog && winDialogData != null) {
+        val latestData = winDialogData?.result?.getLatestWingoData?.firstOrNull()
+        val winAmount = winDialogData?.result?.total_winning_amount ?: "-"
+        val period = "60 Seconds"
+        val periodNumber = latestData?.id ?: "-"
+        val resultColors = buildList<String> {
+            latestData?.let { data ->
+                // Map the response fields to display format
+                data.number_result?.let { numberResult ->
+                    if (numberResult.isNotBlank()) add(numberResult)
+                }
+                data.color_result?.let { colorResult ->
+                    if (colorResult.isNotBlank()) add(colorResult.uppercase())
+                }
+                data.big_small_result?.let { bigSmallResult ->
+                    if (bigSmallResult.isNotBlank()) add(bigSmallResult.uppercase())
+                }
+            }
+        }.filter { it.isNotBlank() }
+        
+        com.example.windialog.WinDialog(
+            isVisible = showWinDialog,
+            onDismiss = { showWinDialog = false },
+            winAmount = "₹$winAmount",
+            period = period,
+            periodNumber = periodNumber,
+            resultColors = resultColors,
+            autoCloseSeconds = 2
+        )
+    }
 
     // Convert Game History API response to table data
     val gameHistoryData = remember(gameHistoryResource) {
@@ -117,9 +194,9 @@ fun Wingo60Screen(
                 resource.data?.result?.history?.map { historyItem ->
                     listOf(
                         historyItem.period_60,
-                        historyItem.number_result.ifEmpty { "Loading..." }, // Display "---" if empty
-                        historyItem.color_result.ifEmpty { "Loading..." },   // Display "---" if empty
-                        historyItem.big_small_result.ifEmpty { "Loading..." } // Display "---" if empty
+                        historyItem.number_result.ifEmpty { "Loading..." },
+                        historyItem.color_result.ifEmpty { "Loading..." },
+                        historyItem.big_small_result.ifEmpty { "Loading..." }
                     )
                 } ?: listOf(listOf("No Data", "No Data", "No Data", "No Data"))
             }
@@ -130,7 +207,7 @@ fun Wingo60Screen(
                 listOf("Loading...", "Loading...", "Loading...", "Loading...")
             )
             else -> listOf(
-                listOf("Loading...", "Loading...", "Loading...", "Loading...", "Loading...")
+                listOf("Loading...", "Loading...", "Loading...", "Loading...")
             )
         }
     }
@@ -148,7 +225,7 @@ fun Wingo60Screen(
                         historyItem.bidNum,
                         historyItem.price,
                         historyItem.resultStatus,
-                        historyItem.winning_amount ?: "0" // Ensure winning_amount is not null
+                        historyItem.winning_amount ?: "0"
                     )
                 } ?: listOf(listOf("No Data", "No Data", "No Data", "No Data", "No Data"))
             }
@@ -181,7 +258,7 @@ fun Wingo60Screen(
 
     LaunchedEffect(showCountdownOverlay) {
         if (showCountdownOverlay && showBettingPopup) {
-            android.util.Log.d("Wingo30Screen", "Auto-closing betting dialog due to countdown overlay")
+            Log.d("Wingo60Screen", "Auto-closing betting dialog due to countdown overlay")
             showBettingPopup = false
             colorSelected = false
         }
@@ -197,8 +274,6 @@ fun Wingo60Screen(
     LaunchedEffect(Unit) {
         onShowTopBar(false)
         onShowBottomBar(false)
-        // ViewModel's init block already handles initial fetch and timer start.
-        // Also, the ViewModel's init block starts game history polling by default.
     }
 
     Scaffold(
@@ -286,9 +361,7 @@ fun Wingo60Screen(
                                 onClick = { },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(
-                                        0xFFFF6B35
-                                    )
+                                    containerColor = Color(0xFFFF6B35)
                                 ),
                                 shape = RoundedCornerShape(25.dp)
                             ) {
@@ -298,9 +371,7 @@ fun Wingo60Screen(
                                 onClick = { },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(
-                                        0xFF4CAF50
-                                    )
+                                    containerColor = Color(0xFF4CAF50)
                                 ),
                                 shape = RoundedCornerShape(25.dp)
                             ) {
@@ -326,7 +397,7 @@ fun Wingo60Screen(
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
-                                text = "Win Go 60s", // Updated text
+                                text = "Win Go 60s",
                                 color = Color.White,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
@@ -425,9 +496,7 @@ fun Wingo60Screen(
                                     ) {
                                         Text(
                                             text = char.toString(),
-                                            color = if (char == ':') Color.Black else Color(
-                                                0xFFFF6B35
-                                            ),
+                                            color = if (char == ':') Color.Black else Color(0xFFFF6B35),
                                             fontSize = 16.sp,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -537,14 +606,7 @@ fun Wingo60Screen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 items(
-                                    listOf(
-                                        "Random",
-                                        "X1",
-                                        "X5",
-                                        "X10",
-                                        "X50",
-                                        "X100"
-                                    )
+                                    listOf("Random", "X1", "X5", "X10", "X50", "X100")
                                 ) { multiplier ->
                                     MultiplierButton(
                                         text = multiplier,
@@ -654,7 +716,7 @@ fun Wingo60Screen(
                         text = "Game History",
                         isSelected = selectedHistoryTab == "Game History",
                         onClick = {
-                            viewModel.onGameHistoryTabSelected() // Let ViewModel manage state and polling
+                            viewModel.onGameHistoryTabSelected()
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -662,7 +724,7 @@ fun Wingo60Screen(
                         text = "My History",
                         isSelected = selectedHistoryTab == "My History",
                         onClick = {
-                            viewModel.onMyHistoryTabSelected() // Let ViewModel manage state and one-time fetch
+                            viewModel.onMyHistoryTabSelected()
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -675,15 +737,11 @@ fun Wingo60Screen(
                     "Game History" -> {
                         CompactExcelTableforWingo(data = gameHistoryData)
                     }
-
                     "My History" -> {
                         MyHistoryTableforWingo(data = myHistoryData)
                     }
-                    // ADDED: This 'else' branch makes the 'when' expression exhaustive for String type
                     else -> {
-                        // Fallback for any unexpected or unhandled selectedHistoryTab values
-                        // You might want to log this case or show a specific error UI
-                        CompactExcelTableforWingo(data = gameHistoryData) // Use gameHistoryData as a default fallback
+                        CompactExcelTableforWingo(data = gameHistoryData)
                     }
                 }
             }
@@ -735,7 +793,6 @@ fun Wingo60Screen(
                     showSuccessMessage = true
                     colorSelected = false
                     viewModel.fetchMyHistory()
-//                    viewModel.fetchGameHistory()
                 }
             )
         }

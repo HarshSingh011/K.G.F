@@ -122,7 +122,7 @@ data class DashboardResult(
     val user: DashboardUser,
 
     @SerializedName("total_balance")
-    val totalBalance: Int
+    val totalBalance: String,
 )
 
 data class DashboardUser(

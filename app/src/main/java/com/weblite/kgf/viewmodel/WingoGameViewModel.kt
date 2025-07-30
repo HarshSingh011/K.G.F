@@ -26,6 +26,12 @@ class WingoGameViewModel @Inject constructor(
     private val repository: UserRepository
 ) : AndroidViewModel(application) {
 
+    // --- Popup History State and Fetch Function (added at the bottom for clarity) ---
+    private val _popupHistoryResponse = MutableStateFlow<com.weblite.kgf.data.Wingo30SecDataClasses.BettingGameResultResponse?>(null)
+    val popupHistoryResponse: StateFlow<com.weblite.kgf.data.Wingo30SecDataClasses.BettingGameResultResponse?> = _popupHistoryResponse
+
+
+
     // Game History State
     private val _gameHistoryResponse = MutableStateFlow<Resource<GameHistoryResponse>?>(null)
     val gameHistoryResponse: StateFlow<Resource<GameHistoryResponse>?> = _gameHistoryResponse
@@ -247,6 +253,34 @@ class WingoGameViewModel @Inject constructor(
         } catch (e: Exception) {
             Log.e("WingoGameVM", "Error placing bet", e)
             Result.failure(e)
+        }
+    }
+
+    fun fetchWingo30SecPopupHistory() {
+        viewModelScope.launch {
+            val userId = SharedPrefManager.getString("user_id", "0") ?: "0"
+            Log.d("WIngoWinDialog", "Calling getWingo30SecPopupHistory with userId: $userId")
+            try {
+                val response = repository.getWingo30SecPopupHistory(userId)
+                response.fold(
+                    onSuccess = { data ->
+                        if (data == null) {
+                            Log.e("WIngoWinDialog", "API returned null data!")
+                        } else {
+                            Log.d("Full popup history API response", "${data}")
+                            Log.d("WIngoWinDialog", "Popup history fetched successfully VM: $data")
+                        }
+                        _popupHistoryResponse.value = data
+                    },
+                    onFailure = { error ->
+                        _popupHistoryResponse.value = null
+                        Log.e("WIngoWinDialog", "Failed to fetch popup history: ${error.message}")
+                    }
+                )
+            } catch (e: Exception) {
+                _popupHistoryResponse.value = null
+                Log.e("WIngoWinDialog", "Exception in fetchWingo30SecPopupHistory: ${e.message}", e)
+            }
         }
     }
 }

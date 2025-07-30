@@ -107,10 +107,12 @@ class MainViewModel @Inject constructor(
                         dashboardState.value = Resource.Error("Empty response")
                     }
                 } else {
+                    Log.d("DASHBOARD_RESPONSE", "Error: ${response.errorBody()?.string()}")
                     dashboardState.value =
                         Resource.Error("Server error: ${response.code()}")
                 }
             } catch (e: Exception) {
+                Log.d("DASHBOARD_RESPONSE", "Exception: ${e.message}")
                 dashboardState.value = Resource.Error("Exception: ${e.message}")
             }
         }

@@ -3,6 +3,7 @@ package com.weblite.kgf.Api2
 import android.util.Log
 import com.google.gson.Gson
 import com.weblite.kgf.data.PeriodIdResponse
+import com.weblite.kgf.data.K3PopupHistoryResponse
 import retrofit2.Response
 import timber.log.Timber
 import javax.inject.Inject
@@ -10,6 +11,61 @@ import javax.inject.Inject
 class UserRepository @Inject constructor(
     private val apiService: ApiService
 ) {
+    // --- Popup History API (added at the very end for clarity) ---
+    suspend fun getWingo30SecPopupHistory(userId: String): Result<com.weblite.kgf.data.Wingo30SecDataClasses.BettingGameResultResponse> {
+        return try {
+            val response = apiService.getWingo30SecPopupHistory(userId)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Error: ${response.code()} ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // --- Wingo 60 Popup History API ---
+    suspend fun getWingo60SecPopupHistory(userId: String): Result<com.weblite.kgf.data.Wingo30SecDataClasses.BettingGameResultResponse> {
+        return try {
+            val response = apiService.getWingo60SecPopupHistory(userId)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Error: ${response.code()} ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // --- K3 Popup History APIs ---
+    suspend fun getK330PopupHistory(userId: String): Result<K3PopupHistoryResponse> {
+        return try {
+            val response = apiService.getK330PopupHistory(userId)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Error: ${response.code()} ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getK360PopupHistory(userId: String): Result<K3PopupHistoryResponse> {
+        return try {
+            val response = apiService.getK360PopupHistory(userId)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Error: ${response.code()} ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun loginUser(mobile: String, pass: String): Response<LoginResponse> {
         val request = LoginRequest(mobile, pass)
         return apiService.loginUser(request)
@@ -26,6 +82,7 @@ class UserRepository @Inject constructor(
     }
 
     suspend fun getDashboard(userId: String?): Response<DashboardResponse> {
+        Log.d("DASHBOARD_RESPONSE", "Fetching dashboard for userId Respository: $userId")
         return apiService.getDashboard(userId)
     }
 
@@ -62,7 +119,6 @@ class UserRepository @Inject constructor(
             val response = apiService.getUserProfile(userId)
             if (response.isSuccessful && response.body() != null) {
                 val body = response.body()
-                //'result' exists because body() is ProfileResponseWrapper
                 Result.success(response.body()!!.result)
             } else {
                 Result.failure(Exception("Error: ${response.code()} ${response.message()}"))
@@ -71,20 +127,6 @@ class UserRepository @Inject constructor(
             Result.failure(e)
         }
     }
-//    suspend fun fetchUserProfileAndLog(userId: String) {
-//        try {
-//            val response = apiService.getUserProfile(userId)
-//
-//            if (response.isSuccessful) {
-//                val body = response.body()
-//                Log.d("API_SUCCESS", "Raw response: ${Gson().toJson(body)}")
-//            } else {
-//                Log.e("API_ERROR", "HTTP ${response.code()} - ${response.message()}")
-//            }
-//        } catch (e: Exception) {
-//            Log.e("API_EXCEPTION", "Error: ${e.localizedMessage}")
-//        }
-//    }
 
     // commission
     suspend fun getCommissions(userId: String?): Response<CommissionResponse> {
@@ -94,10 +136,6 @@ class UserRepository @Inject constructor(
     suspend fun getPromotionView(userId: String): Response<PromotionViewResponse> {
         return apiService.getPromotionView(userId)
     }
-
-//    suspend fun getWingo30SecPeriod(): Response<Wingo30SecPeriodResponse> {
-//        return apiService.getWingo30SecPeriod()
-//    }
 
     suspend fun placeBet(
         userid: String,

@@ -2,6 +2,7 @@ package com.weblite.kgf.ui.screens.game
 
 import android.annotation.SuppressLint
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -72,10 +73,12 @@ import com.example.weblite.components.ImageNumberButton
 import com.example.weblite.components.MultiplierButton
 import com.example.weblite.components.MyHistoryTableforWingo
 import com.example.weblite.components.SuccessMessage
+import com.weblite.kgf.Api2.MainViewModel
 import com.weblite.kgf.Api2.PeriodIdUIEvent
 import com.weblite.kgf.Api2.Resource
 import kotlin.collections.forEach
 import com.weblite.kgf.R
+import com.weblite.kgf.data.Wingo30SecDataClasses.BettingGameResultResponse
 import com.weblite.kgf.ui.screens.KGFLogoText
 import com.weblite.kgf.viewmodel.WingoGameViewModel
 import kotlinx.coroutines.delay
@@ -123,14 +126,20 @@ fun getNumberBackgroundColor(number: Int): Color {
 @SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+
 fun Wingo30Screen(
-    // Auto-dismiss success message after a short period
-    
     onBackClick: () -> Unit = {},
     onShowTopBar: (Boolean) -> Unit,
     onShowBottomBar: (Boolean) -> Unit,
-    viewModel: WingoGameViewModel = hiltViewModel()
+    viewModel: WingoGameViewModel = hiltViewModel(),
+    mainViewModel: MainViewModel = hiltViewModel()
 ) {
+    val dashboardState = mainViewModel.dashboardState.value
+    val userId = com.weblite.kgf.Api2.SharedPrefManager.getString("user_id", "0")
+    var totalBalance by remember { mutableStateOf(0.0) }
+    var balanceString by remember { mutableStateOf("0.00") }
+    var lastGoodBalanceString by remember { mutableStateOf("0.00") }
+
     var selectedColor by remember { mutableStateOf("") }
     var selectedNumbers by remember { mutableStateOf(setOf<Int>()) }
     var selectedColors by remember { mutableStateOf(setOf<String>()) }
@@ -140,13 +149,41 @@ fun Wingo30Screen(
     var showBettingPopup by remember { mutableStateOf(false) }
     var selectedNumberForBetting by remember { mutableStateOf(0) }
     var selectedNumberBackgroundColor by remember { mutableStateOf<Color?>(null) }
-    var totalBalance by remember { mutableStateOf(17510970.65) }
     var showSuccessMessage by remember { mutableStateOf(false) }
     var selectedColorForBetting by remember { mutableStateOf("Green") }
     var colorSelected by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Timer logic
+    // Fetch dashboard data when screen is first composed
+    LaunchedEffect(Unit) {
+        mainViewModel.fetchDashboard(userId)
+    }
+
+    LaunchedEffect(dashboardState) {
+        // Only update UI if dashboardState is Resource.Success and has a valid balance
+        val successState = dashboardState as? Resource.Success<*>
+        val data = successState?.data
+        // Try to access totalBalance safely
+        val validBalance = try {
+            val resultField = data?.javaClass?.getDeclaredField("result")
+            resultField?.isAccessible = true
+            val resultObj = resultField?.get(data)
+            val totalBalanceField = resultObj?.javaClass?.getDeclaredField("totalBalance")
+            totalBalanceField?.isAccessible = true
+            totalBalanceField?.get(resultObj) as? String
+        } catch (e: Exception) {
+            null
+        }
+        if (validBalance != null && validBalance != "0.00") {
+            balanceString = validBalance
+            lastGoodBalanceString = validBalance
+            totalBalance = validBalance.toDoubleOrNull() ?: 0.0
+        } else {
+            // If loading or error, keep showing last known good balance
+            balanceString = lastGoodBalanceString
+        }
+    }
+
     var secondsRemaining by remember { mutableIntStateOf(30) }
     var showPeriodId by remember { mutableStateOf("") }
     var serverEpochTimeBase by remember { mutableStateOf<Long?>(null) } // Server time at API fetch
@@ -157,17 +194,67 @@ fun Wingo30Screen(
     val gameHistoryResponse by viewModel.gameHistoryResponse.collectAsStateWithLifecycle()
     val myHistoryResponse by viewModel.myHistoryResponse.collectAsStateWithLifecycle()
 
+    // --- Win Dialog State (new logic) ---
+    var showWinDialog by remember { mutableStateOf(false) }
+    var winDialogData by remember { mutableStateOf<com.weblite.kgf.data.Wingo30SecDataClasses.BettingGameResultResponse?>(null) }
+    val popupHistoryResponse by viewModel.popupHistoryResponse.collectAsStateWithLifecycle()
+
+    // --- Show Win Dialog based on result.total_winning_amount ---
+    LaunchedEffect(popupHistoryResponse) {
+        Log.d("Full popup history API response", "$popupHistoryResponse")
+        Log.d("WIngoWinDialog", "popupHistoryResponse: $popupHistoryResponse")
+        val winAmount = popupHistoryResponse?.result?.total_winning_amount?.toDoubleOrNull() ?: 0.0
+        Log.d("WIngoWinDialog", "total_winning_amount: $winAmount (from result.total_winning_amount)")
+        if (winAmount > 0.0) {
+            winDialogData = popupHistoryResponse
+            showWinDialog = true
+            Log.d("WIngoWinDialog", "Showing Win Dialog, total_winning_amount: $winAmount")
+            delay(2000)
+            showWinDialog = false
+        } else {
+            showWinDialog = false
+            Log.d("WIngoWinDialog", "Not showing Win Dialog, total_winning_amount: $winAmount")
+        }
+    }
+    
+
+
+    // --- Win Dialog Appear (new logic) ---
+    if (showWinDialog && winDialogData != null) {
+        val latestData = winDialogData?.result?.getLatestWingoData?.firstOrNull()
+        val winAmount = winDialogData?.result?.total_winning_amount ?: "-"
+        val period = "30 Seconds" // Or get from API if available
+        val periodNumber = latestData?.id ?: "-"
+        val resultColors = buildList<String> {
+            latestData?.color_result?.let { add(it) }
+            latestData?.number_result?.let { add(it) }
+            latestData?.big_small_result?.let { add(it) }
+        }.filter { it.isNotBlank() }
+        com.example.windialog.WinDialog(
+            isVisible = showWinDialog,
+            onDismiss = { showWinDialog = false },
+            winAmount = "₹$winAmount",
+            period = period,
+            periodNumber = periodNumber,
+            resultColors = resultColors,
+            autoCloseSeconds = 2
+        )
+    }
+
     // Initial fetch of period ID
     LaunchedEffect(Unit) {
         viewModel.fetchPeriodId()
     }
 
-    LaunchedEffect(showSuccessMessage) {
+    // Ensure success message always shows for 300ms, even on rapid re-trigger
+    var successMessageKey by remember { mutableStateOf(0) }
+    LaunchedEffect(successMessageKey) {
         if (showSuccessMessage) {
-            delay(400)
+            delay(300)
             showSuccessMessage = false
         }
     }
+
 
     // UI Update for period ID and timer synchronization
     LaunchedEffect(Unit) {
@@ -201,29 +288,31 @@ fun Wingo30Screen(
 
     // Timer countdown logic
     LaunchedEffect(true) {
+        var prevSecondsRemaining = 30
         while (true) {
             serverEpochTimeBase?.let { serverBase ->
                 clientTimeAtFetch?.let { clientFetchTime ->
                     val now = Instant.now().epochSecond
-                    // Calculate elapsed time from the server's perspective, adjusted for network latency
                     val elapsedSinceServerTime = (now - clientFetchTime) + (clientFetchTime - serverBase)
-
-                    // Calculate seconds remaining in the current 30-second cycle
                     val calculatedSeconds = (30 - (elapsedSinceServerTime % 30)).toInt()
                     secondsRemaining = if (calculatedSeconds <= 0) 30 + calculatedSeconds else calculatedSeconds
-
-                    // Check if a new 30-second cycle has started (or is about to start)
-                    // This is for re-fetching period ID and history data
                     val currentCycleIdentifier = elapsedSinceServerTime / 30
                     if (lastFetchedMinute == null || lastFetchedMinute != currentCycleIdentifier) {
                         lastFetchedMinute = currentCycleIdentifier
-                        viewModel.fetchPeriodId() // Re-fetch server time and period ID
-                        viewModel.fetchGameHistory() // Refresh game history
-                        viewModel.fetchMyHistory() // Refresh my history when countdown completes
+                        viewModel.fetchPeriodId()
+                        viewModel.fetchGameHistory()
+                        // Launch MyHistory fetch in a background coroutine to avoid UI blocking
+                        coroutineScope.launch {
+                            viewModel.fetchMyHistory()
+                        }
+                        Log.d("WIngoWinDialog", "Calling fetchWingo30SecPopupHistory after timer completion")
+                        viewModel.fetchWingo30SecPopupHistory()
+                        // Fetch dashboard after timer completes
+                        mainViewModel.fetchDashboard(userId)
                     }
                 }
             }
-            delay(1000) // Update every second
+            delay(1000)
         }
     }
 
@@ -379,7 +468,7 @@ fun Wingo30Screen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "₹ ${String.format("%,.2f", totalBalance)}",
+                            text = "₹ $balanceString",
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.Black
@@ -774,7 +863,11 @@ fun Wingo30Screen(
                         isSelected = selectedHistoryTab == "My History",
                         onClick = {
                             selectedHistoryTab = "My History"
-                            viewModel.onMyHistoryTabSelected() // Stop polling and fetch my history once
+                            // Trigger API call after tab switch, do not block UI
+                            coroutineScope.launch {
+                                viewModel.fetchMyHistory()
+                            }
+                            viewModel.onMyHistoryTabSelected() // Stop polling if needed
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -835,10 +928,14 @@ fun Wingo30Screen(
                     colorSelected = false
                 },
                 onConfirmBet = { number, color, amount, multiplier ->
+                    showSuccessMessage = false // Reset first to ensure effect restarts
+                    successMessageKey++
                     showSuccessMessage = true
                     colorSelected = false
                     // Restore API calls after betting
                     viewModel.fetchMyHistory()
+                    // Fetch dashboard after bet placed
+                    mainViewModel.fetchDashboard(userId)
 //                    viewModel.fetchGameHistory()
                 }
             )

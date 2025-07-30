@@ -100,12 +100,11 @@ fun WithdrawScreen(
     var showUPIcard by remember { mutableStateOf(true) }
     val dashboardState = viewModel.dashboardState.value
 
-    var totalBalance by remember { mutableStateOf(0) }
+    var totalBalance by remember { mutableStateOf("") }
     if (dashboardState is Resource.Success) {
         dashboardState.data?.result?.let { result ->
             totalBalance = result.totalBalance
         }
-
     }
     /////info
     var isSelectedUPI by remember { mutableStateOf(false) }

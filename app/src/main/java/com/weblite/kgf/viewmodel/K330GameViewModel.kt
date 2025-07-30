@@ -6,8 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.weblite.kgf.Api2.Resource
 import com.weblite.kgf.Api2.SharedPrefManager
 import com.weblite.kgf.data.K330GameRepository
-import com.weblite.kgf.data.K360GameHistoryItem // Still using this for UI consistency
-import com.weblite.kgf.data.K360MyHistoryItem // Still using this for UI consistency
+import com.weblite.kgf.data.K360GameHistoryItem
+import com.weblite.kgf.data.K360MyHistoryItem
+import com.weblite.kgf.data.K3PopupHistoryResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -31,6 +32,10 @@ class K330GameViewModel @Inject constructor(
 
     private val _k3TimeRemaining = MutableStateFlow<Long>(0L)
     val k3TimeRemaining: StateFlow<Long> = _k3TimeRemaining.asStateFlow()
+
+    // --- Popup History State ---
+    private val _popupHistoryResponse = MutableStateFlow<K3PopupHistoryResponse?>(null)
+    val popupHistoryResponse: StateFlow<K3PopupHistoryResponse?> = _popupHistoryResponse
 
     private val _k3GameHistory = MutableStateFlow<Resource<List<K360GameHistoryItem>>>(Resource.Loading())
     val k3GameHistory: StateFlow<Resource<List<K360GameHistoryItem>>> = _k3GameHistory.asStateFlow()
@@ -64,7 +69,7 @@ class K330GameViewModel @Inject constructor(
     private fun fetchK3PeriodIdAndStartTimer() {
         timerJob?.cancel()
         viewModelScope.launch {
-            val userId = SharedPrefManager.getString("user_id", "0") ?: "0" // Fixed: Ensure userId is non-nullable
+            val userId = SharedPrefManager.getString("user_id", "0") ?: "0"
             if (userId == "0") {
                 Log.e("K330GameViewModel", "User ID not found in SharedPreferences. Cannot fetch period ID.")
                 _k3PeriodId.value = "N/A"
@@ -86,7 +91,7 @@ class K330GameViewModel @Inject constructor(
                             System.currentTimeMillis()
                         }
 
-                        val periodDurationSeconds = result.time ?: 30 // Default to 30 seconds for K330
+                        val periodDurationSeconds = result.time ?: 30
                         val periodDurationMillis = periodDurationSeconds.toLong() * 1000L
 
                         val periodEndTimeMillis = serverCurrentTimeMillis + periodDurationMillis
@@ -128,8 +133,16 @@ class K330GameViewModel @Inject constructor(
                 delay(1000)
                 _k3TimeRemaining.value -= 1000
             }
-            Log.d("K330GameViewModel", "Timer reached 0, fetching new period ID.")
+            Log.d("K330GameViewModel", "Timer reached 0.")
+            
+            // Fetch popup history for the period that just ended
+            Log.d("K3WinDialog", "Calling fetchK330PopupHistory after timer completion")
+            fetchK330PopupHistory()
+
+            // Then, fetch the new period ID and restart the timer
+            Log.d("K330GameViewModel", "Fetching new period ID and restarting timer.")
             fetchK3PeriodIdAndStartTimer()
+            
             if (_activeHistoryTab.value == "My History") {
                 fetchK3MyHistory()
             }
@@ -170,7 +183,6 @@ class K330GameViewModel @Inject constructor(
                 val response = repository.getK330GameHistory(userId)
                 if (response.isSuccessful) {
                     response.body()?.result?.history?.let { history ->
-                        // Transform K330GameHistoryItem to K360GameHistoryItem for UI consistency
                         val transformedHistory = history.map { item ->
                             val number = if (item.bidNum.isNullOrBlank()) "Loading..." else item.bidNum
                             val bigSmall = if (item.bidBigSmall.isNullOrBlank() && item.finalBidBigSmall.isNullOrBlank()) "Loading..." else (item.bidBigSmall ?: item.finalBidBigSmall ?: "")
@@ -239,7 +251,6 @@ class K330GameViewModel @Inject constructor(
                 val response = repository.getK330MyHistory(userId)
                 if (response.isSuccessful) {
                     response.body()?.result?.history?.let { history ->
-                        // Transform K330MyHistoryItem to K360MyHistoryItem for UI consistency
                         val transformedHistory = history.map { item ->
                             K360MyHistoryItem(
                                 k60beatID = item.id ?: "",
@@ -281,6 +292,35 @@ class K330GameViewModel @Inject constructor(
                     _k3MyHistory.value = Resource.Error("Error fetching K330 my history: ${e.message}")
                 }
                 Log.e("K330GameViewModel", "Error fetching K330 my history", e)
+            }
+        }
+    }
+
+    // --- K3 30 Popup History Function ---
+    fun fetchK330PopupHistory() {
+        viewModelScope.launch {
+            val userId = SharedPrefManager.getString("user_id", "0") ?: "0"
+            Log.d("K3WinDialog", "Calling getK330PopupHistory with userId: $userId")
+            try {
+                val response = repository.getK330PopupHistory(userId)
+                response.fold(
+                    onSuccess = { data ->
+                        if (data == null) {
+                            Log.e("K3WinDialog", "API returned null data!")
+                        } else {
+                            Log.d("Full popup history API response", "${data}")
+                            Log.d("K3WinDialog", "Popup history fetched successfully VM: $data")
+                        }
+                        _popupHistoryResponse.value = data
+                    },
+                    onFailure = { error ->
+                        _popupHistoryResponse.value = null
+                        Log.e("K3WinDialog", "Failed to fetch popup history: ${error.message}")
+                    }
+                )
+            } catch (e: Exception) {
+                _popupHistoryResponse.value = null
+                Log.e("K3WinDialog", "Exception in fetchK330PopupHistory: ${e.message}", e)
             }
         }
     }

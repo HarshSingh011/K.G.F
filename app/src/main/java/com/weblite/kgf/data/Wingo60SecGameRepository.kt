@@ -1,8 +1,6 @@
 package com.weblite.kgf.data
 
 import com.weblite.kgf.Api2.ApiService
-import com.weblite.kgf.Api2.BetRequest
-import com.weblite.kgf.Api2.BetResponse
 import com.weblite.kgf.data.Wingo60SecDataClasses.Game60SecBettingResponse
 import com.weblite.kgf.data.Wingo60SecDataClasses.GameBet60Sec
 import com.weblite.kgf.data.Wingo60SecDataClasses.GameHistory60SecResponse
@@ -62,5 +60,19 @@ class Wingo60GameRepository @Inject constructor(
             boost = boost
         )
         return apiService.place60SecBet(request)
+    }
+
+    // --- Wingo 60 Popup History Function (using same data class as Wingo30) ---
+    suspend fun getWingo60SecPopupHistory(userId: String): Result<com.weblite.kgf.data.Wingo30SecDataClasses.BettingGameResultResponse> {
+        return try {
+            val response = apiService.getWingo60SecPopupHistory(userId)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Error: ${response.code()} ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

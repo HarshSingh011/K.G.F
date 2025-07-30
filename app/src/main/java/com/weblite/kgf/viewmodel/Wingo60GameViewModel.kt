@@ -43,13 +43,16 @@ class Wingo60GameViewModel @Inject constructor(
     private val _selectedHistoryTab = MutableStateFlow("Game History")
     val selectedHistoryTab: StateFlow<String> = _selectedHistoryTab
 
+    // --- Popup History State (new logic for win dialog) ---
+    private val _popupHistoryResponse = MutableStateFlow<com.weblite.kgf.data.Wingo30SecDataClasses.BettingGameResultResponse?>(null)
+    val popupHistoryResponse: StateFlow<com.weblite.kgf.data.Wingo30SecDataClasses.BettingGameResultResponse?> = _popupHistoryResponse
+
     // Track if we have valid data to avoid showing loading unnecessarily
     private var hasGameHistoryData = false
     private var hasMyHistoryData = false
 
     private var timerJob: Job? = null
     private var gameHistoryPollingJob: Job? = null
-    // No separate myHistoryPollingJob, as per WingoGameViewModel logic
 
     init {
         // This ensures the API is called and timer is set when the ViewModel is first created
@@ -99,9 +102,6 @@ class Wingo60GameViewModel @Inject constructor(
                         } else {
                             startTimer()
                         }
-                        // After fetching a new period (either initially or after timer reset),
-                        // if My History tab is active, refresh My History.
-                        // This is handled by the tab selection logic now.
                     } catch (e: Exception) {
                         Log.e("Wingo60GameViewModel", "Error parsing date or calculating time: $updateAtString", e)
                         _timeRemaining.value = 60 // Fallback to full timer if parsing fails
@@ -134,13 +134,16 @@ class Wingo60GameViewModel @Inject constructor(
             if (_selectedHistoryTab.value == "My History") {
                 fetchMyHistory()
             }
+            // Fetch popup history after timer completion (win dialog logic)
+            Log.d("Wingo60WinDialog", "Calling fetchWingo60SecPopupHistory after timer completion")
+            fetchWingo60SecPopupHistory()
         }
     }
 
     private fun startGameHistoryPolling() {
         gameHistoryPollingJob?.cancel() // Cancel any existing polling job
         gameHistoryPollingJob = viewModelScope.launch {
-            Log.d("WingoGameVM", "Starting Game History polling")
+            Log.d("Wingo60GameVM", "Starting Game History polling")
             while (true) { // Loop indefinitely while this job is active
                 fetchGameHistory()
                 delay(3000) // Poll every 3 seconds
@@ -149,20 +152,20 @@ class Wingo60GameViewModel @Inject constructor(
     }
 
     private fun stopGameHistoryPolling() {
-        Log.d("WingoGameVM", "Stopping Game History polling")
+        Log.d("Wingo60GameVM", "Stopping Game History polling")
         gameHistoryPollingJob?.cancel()
         gameHistoryPollingJob = null
     }
 
     // Tab Selection Handlers
     fun onGameHistoryTabSelected() {
-        Log.d("WingoGameVM", "Game History tab selected")
+        Log.d("Wingo60GameVM", "Game History tab selected")
         _selectedHistoryTab.value = "Game History"
         startGameHistoryPolling() // Start polling for game history
     }
 
     fun onMyHistoryTabSelected() {
-        Log.d("WingoGameVM", "My History tab selected")
+        Log.d("Wingo60GameVM", "My History tab selected")
         _selectedHistoryTab.value = "My History"
         stopGameHistoryPolling() // Stop game history polling
         fetchMyHistory() // Fetch my history once
@@ -171,7 +174,7 @@ class Wingo60GameViewModel @Inject constructor(
     fun fetchGameHistory() {
         viewModelScope.launch {
             try {
-                Log.d("WingoGameVM", "Fetching Game History")
+                Log.d("Wingo60GameVM", "Fetching Game History")
 
                 // Only show loading if we don't have data yet
                 if (!hasGameHistoryData) {
@@ -186,30 +189,30 @@ class Wingo60GameViewModel @Inject constructor(
                         if (currentData == null || !areGameHistoriesIdentical(currentData, newGameHistoryResponse)) {
                             _gameHistoryResponse.value = Resource.Success(newGameHistoryResponse)
                             hasGameHistoryData = true
-                            Log.d("WingoGameVM", "Game history updated: ${newGameHistoryResponse.result.history.size} items")
+                            Log.d("Wingo60GameVM", "Game history updated: ${newGameHistoryResponse.result.history.size} items")
                         } else {
-                            Log.d("WingoGameVM", "Game history unchanged, skipping update.")
+                            Log.d("Wingo60GameVM", "Game history unchanged, skipping update.")
                         }
                     } ?: run {
                         // Only show error if we don't have existing data
                         if (!hasGameHistoryData) {
                             _gameHistoryResponse.value = Resource.Error("Empty response")
                         }
-                        Log.e("WingoGameVM", "Game history response body is null")
+                        Log.e("Wingo60GameVM", "Game history response body is null")
                     }
                 } else {
                     // Only show error if we don't have existing data
                     if (!hasGameHistoryData) {
                         _gameHistoryResponse.value = Resource.Error("Server error: ${response.code()}")
                     }
-                    Log.e("WingoGameVM", "Game history API failed: ${response.code()} - ${response.message()}")
+                    Log.e("Wingo60GameVM", "Game history API failed: ${response.code()} - ${response.message()}")
                 }
             } catch (e: Exception) {
                 // Only show error if we don't have existing data
                 if (!hasGameHistoryData) {
                     _gameHistoryResponse.value = Resource.Error("Exception: ${e.message}")
                 }
-                Log.e("WingoGameVM", "Error fetching game history: ${e.message}", e)
+                Log.e("Wingo60GameVM", "Error fetching game history: ${e.message}", e)
             }
         }
     }
@@ -228,9 +231,9 @@ class Wingo60GameViewModel @Inject constructor(
             try {
                 val userId = SharedPrefManager.getString("user_id", "0") ?: "0"
 
-                Log.d("WingoGameVM", "=== FETCHING MY HISTORY ===")
-                Log.d("WingoGameVM", "User ID: $userId")
-                Log.d("WingoGameVM", "================================")
+                Log.d("Wingo60GameVM", "=== FETCHING MY HISTORY ===")
+                Log.d("Wingo60GameVM", "User ID: $userId")
+                Log.d("Wingo60GameVM", "================================")
 
                 if (userId == "0") {
                     _myHistoryResponse.value = Resource.Error("User not logged in")
@@ -245,33 +248,57 @@ class Wingo60GameViewModel @Inject constructor(
                 val response = repository.getWingo60SecMyHistory(userId)
                 if (response.isSuccessful) {
                     response.body()?.let { newMyHistoryResponse ->
-                        val currentData = _myHistoryResponse.value?.data
-                        // Removed the areMyHistoriesIdentical check to ensure UI updates for status changes
-                        // For My History, we generally want to update even if the period is the same,
-                        // as the status or winning amount might change.
                         _myHistoryResponse.value = Resource.Success(newMyHistoryResponse)
                         hasMyHistoryData = true
-                        Log.d("WingoGameVM", "My history updated: ${newMyHistoryResponse.result.history.size} items")
+                        Log.d("Wingo60GameVM", "My history updated: ${newMyHistoryResponse.result.history.size} items")
                     } ?: run {
                         // Only show error if we don't have existing data
                         if (!hasMyHistoryData) {
                             _myHistoryResponse.value = Resource.Error("Empty response")
                         }
-                        Log.e("WingoGameVM", "My history response body is null")
+                        Log.e("Wingo60GameVM", "My history response body is null")
                     }
                 } else {
                     // Only show error if we don't have existing data
                     if (!hasMyHistoryData) {
                         _myHistoryResponse.value = Resource.Error("Server error: ${response.code()}")
                     }
-                    Log.e("WingoGameVM", "My history API failed: ${response.code()} - ${response.message()}")
+                    Log.e("Wingo60GameVM", "My history API failed: ${response.code()} - ${response.message()}")
                 }
             } catch (e: Exception) {
                 // Only show error if we don't have existing data
                 if (!hasMyHistoryData) {
                     _myHistoryResponse.value = Resource.Error("Exception: ${e.message}")
                 }
-                Log.e("WingoGameVM", "Error fetching my history: ${e.message}", e)
+                Log.e("Wingo60GameVM", "Error fetching my history: ${e.message}", e)
+            }
+        }
+    }
+
+    // --- Wingo 60 Popup History Function (new logic for win dialog) ---
+    fun fetchWingo60SecPopupHistory() {
+        viewModelScope.launch {
+            val userId = SharedPrefManager.getString("user_id", "0") ?: "0"
+            Log.d("Wingo60WinDialog", "Calling getWingo60SecPopupHistory with userId: $userId")
+            try {
+                val response = repository.getWingo60SecPopupHistory(userId)
+                response.fold(
+                    onSuccess = { data ->
+                        if (data == null) {
+                            Log.e("Wingo60WinDialog", "API returned null data!")
+                        } else {
+                            Log.d("Wingo60WinDialog", "Popup history fetched successfully VM: $data")
+                        }
+                        _popupHistoryResponse.value = data
+                    },
+                    onFailure = { error ->
+                        _popupHistoryResponse.value = null
+                        Log.e("Wingo60WinDialog", "Failed to fetch popup history: ${error.message}")
+                    }
+                )
+            } catch (e: Exception) {
+                _popupHistoryResponse.value = null
+                Log.e("Wingo60WinDialog", "Exception in fetchWingo60SecPopupHistory: ${e.message}", e)
             }
         }
     }
@@ -285,13 +312,13 @@ class Wingo60GameViewModel @Inject constructor(
         return try {
             val userId = SharedPrefManager.getString("user_id", "0") ?: "0"
 
-            Log.d("WingoGameVM", "=== PLACING BET ===")
-            Log.d("WingoGameVM", "User ID: $userId")
-            Log.d("WingoGameVM", "Bet Type: $bidType")
-            Log.d("WingoGameVM", "Bet Number/Color: $bidNum")
-            Log.d("WingoGameVM", "Quantity: $quantity")
-            Log.d("WingoGameVM", "Price: $price")
-            Log.d("WingoGameVM", "===================")
+            Log.d("Wingo60GameVM", "=== PLACING BET ===")
+            Log.d("Wingo60GameVM", "User ID: $userId")
+            Log.d("Wingo60GameVM", "Bet Type: $bidType")
+            Log.d("Wingo60GameVM", "Bet Number/Color: $bidNum")
+            Log.d("Wingo60GameVM", "Quantity: $quantity")
+            Log.d("Wingo60GameVM", "Price: $price")
+            Log.d("Wingo60GameVM", "===================")
 
             if (userId == "0") {
                 Result.failure(Exception("User not logged in"))
@@ -311,23 +338,22 @@ class Wingo60GameViewModel @Inject constructor(
                 if (response.isSuccessful) {
                     response.body()?.let { betResponse ->
                         if (betResponse.status == "success") {
-                            Log.d("WingoGameVM", "Bet placed successfully: ${betResponse.msg}")
+                            Log.d("Wingo60GameVM", "Bet placed successfully: ${betResponse.msg}")
                             // Refresh my history after successful bet
-                            // This will be handled by the fetchMyHistory() call if My History tab is active
                             fetchMyHistory() // Call fetchMyHistory once after a successful bet
                             Result.success(betResponse.msg)
                         } else {
-                            Log.e("WingoGameVM", "Bet failed: ${betResponse.msg}")
+                            Log.e("Wingo60GameVM", "Bet failed: ${betResponse.msg}")
                             Result.failure(Exception(betResponse.msg))
                         }
                     } ?: Result.failure(Exception("Empty response"))
                 } else {
-                    Log.e("WingoGameVM", "Bet placement failed: ${response.code()} - ${response.message()}")
+                    Log.e("Wingo60GameVM", "Bet placement failed: ${response.code()} - ${response.message()}")
                     Result.failure(Exception("Bet placement failed: ${response.message()}"))
                 }
             }
         } catch (e: Exception) {
-            Log.e("WingoGameVM", "Error placing bet", e)
+            Log.e("Wingo60GameVM", "Error placing bet", e)
             Result.failure(e)
         }
     }

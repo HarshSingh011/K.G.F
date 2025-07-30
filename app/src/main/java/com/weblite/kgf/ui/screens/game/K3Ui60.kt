@@ -76,9 +76,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.weblite.kgf.Api2.Resource
 import com.weblite.kgf.viewmodel.K360GameViewModel
-import com.weblite.kgf.ui.screens.game.getK3BallDrawable // Import from K3Common
-import com.weblite.kgf.utils.formatTimestamp // Import from K3GameUtils
 import kotlinx.coroutines.delay
+import com.weblite.kgf.utils.K3Utils
+import com.weblite.kgf.utils.K3Ball
+import com.weblite.kgf.utils.K3BetOption
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,17 +93,63 @@ fun K3Ui60(
     var showBettingPopup by remember { mutableStateOf(false) }
     var selectedNumberForBetting by remember { mutableStateOf<Int?>(null) }
     var selectedBetTypeForBetting by remember { mutableStateOf<String?>(null) }
-    var totalBalance by remember { mutableStateOf(17436677.65) } // This should ideally come from a ViewModel or user session
+    var totalBalance by remember { mutableStateOf(17436677.65) }
     var showSuccessMessage by remember { mutableStateOf(false) }
 
+    // --- Win Dialog State ---
+    var showWinDialog by remember { mutableStateOf(false) }
+    var winDialogData by remember { mutableStateOf<com.weblite.kgf.data.K3PopupHistoryResponse?>(null) }
+    val popupHistoryResponse by viewModel.popupHistoryResponse.collectAsStateWithLifecycle()
+
+    // --- Show Win Dialog based on result.total_winning_amount ---
+    LaunchedEffect(popupHistoryResponse) {
+        android.util.Log.d("Full popup history API response", "$popupHistoryResponse")
+        android.util.Log.d("K3WinDialog", "popupHistoryResponse: $popupHistoryResponse")
+        val winAmount = popupHistoryResponse?.result?.total_winning_amount ?: 0.0
+        android.util.Log.d("K3WinDialog", "total_winning_amount: $winAmount (from result.total_winning_amount)")
+        if (winAmount > 0.0) {
+            winDialogData = popupHistoryResponse
+            showWinDialog = true
+            android.util.Log.d("K3WinDialog", "Showing Win Dialog, total_winning_amount: $winAmount")
+            delay(2000)
+            showWinDialog = false
+        } else {
+            showWinDialog = false
+            android.util.Log.d("K3WinDialog", "Not showing Win Dialog, total_winning_amount: $winAmount")
+        }
+    }
+
+    // --- Win Dialog Appear ---
+    if (showWinDialog && winDialogData != null) {
+        val latestData = winDialogData?.result?.getLatestWingoData?.firstOrNull()
+        val winAmount = winDialogData?.result?.total_winning_amount?.toString() ?: "-"
+        val period = "60 Seconds"
+        val periodNumber = latestData?.id ?: "-"
+        val resultColors = buildList<String> {
+            latestData?.bidNum?.let { add(it) }
+            latestData?.bidOddEven?.let { add(it) }
+            latestData?.bidBigSmall?.let { add(it) }
+        }.filter { it.isNotBlank() }
+
+        com.example.windialog.WinDialog(
+            isVisible = showWinDialog,
+            onDismiss = { showWinDialog = false },
+            winAmount = "₹$winAmount",
+            period = period,
+            periodNumber = periodNumber,
+            resultColors = resultColors,
+            autoCloseSeconds = 2
+        )
+    }
+
     val k3PeriodId by viewModel.k3PeriodId.collectAsStateWithLifecycle()
-    val timeRemaining by viewModel.k3TimeRemaining.collectAsStateWithLifecycle() // Use k3TimeRemaining
+    val timeRemaining by viewModel.k3TimeRemaining.collectAsStateWithLifecycle()
 
-    val gameHistoryResource by viewModel.k3GameHistory.collectAsStateWithLifecycle() // Use k3GameHistory
-    val myHistoryResource by viewModel.k3MyHistory.collectAsStateWithLifecycle() // Observe my history
-    val selectedHistoryTab by viewModel.activeHistoryTab.collectAsStateWithLifecycle() // Use activeHistoryTab
+    val gameHistoryResource by viewModel.k3GameHistory.collectAsStateWithLifecycle()
+    val myHistoryResource by viewModel.k3MyHistory.collectAsStateWithLifecycle()
+    val selectedHistoryTab by viewModel.activeHistoryTab.collectAsStateWithLifecycle()
 
-    val showCountdownOverlay = timeRemaining <= 10000L && timeRemaining > 0L // 10 seconds in millis
+    val showCountdownOverlay = timeRemaining <= 10000L && timeRemaining > 0L
 
     LaunchedEffect(showCountdownOverlay) {
         if (showCountdownOverlay && showBettingPopup) {
@@ -155,10 +202,10 @@ fun K3Ui60(
                         )
                     } else {
                         listOf(
-                            historyItem.datetime, // Period ID
-                            historyItem.number, // Ball number
-                            historyItem.oddEven, // Only Odd/Even
-                            historyItem.bigSmall // Only Big/Small
+                            historyItem.datetime,
+                            historyItem.number,
+                            historyItem.oddEven,
+                            historyItem.bigSmall
                         )
                     }
                 } ?: listOf(listOf("No Data", "No Data", "No Data", "No Data"))
@@ -183,8 +230,8 @@ fun K3Ui60(
                         historyItem.period,
                         historyItem.bidNum,
                         historyItem.price,
-                        historyItem.status, // Use 'status' for win/loss/pending
-                        historyItem.totalamount // Use 'totalamount' for winning amount
+                        historyItem.status,
+                        historyItem.totalamount
                     )
                 } ?: listOf(listOf("No Data", "No Data", "No Data", "No Data", "No Data"))
             }
@@ -196,7 +243,6 @@ fun K3Ui60(
             )
         }
     }
-
 
     LaunchedEffect(Unit) {
         onShowTopBar(false)
@@ -314,7 +360,7 @@ fun K3Ui60(
                     }
                 }
 
-                // K3 Lotre 30s Card
+                // K3 Lotre 60s Card
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -364,7 +410,6 @@ fun K3Ui60(
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Normal
                                     )
-                                    // Display fetched period ID
                                     Text(
                                         text = k3PeriodId ?: "Loading...",
                                         color = Color.Black,
@@ -380,9 +425,8 @@ fun K3Ui60(
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Normal
                                     )
-                                    // Display fetched and calculated time remaining
                                     Text(
-                                        text = String.format("00:%02d", timeRemaining / 1000), // Convert millis to seconds
+                                        text = String.format("00:%02d", timeRemaining / 1000),
                                         color = Color(0xFFFF6B35),
                                         fontSize = 18.sp,
                                         fontWeight = Bold
@@ -438,7 +482,6 @@ fun K3Ui60(
                                     }
                                 }
                             }
-
                         }
                     }
                 }
@@ -475,7 +518,7 @@ fun K3Ui60(
                                             }
                                         ) {
                                             Image(
-                                                painter = painterResource(id = getK3BallDrawable(ball.number)),
+                                                painter = painterResource(id = K3Utils.getK3BallDrawable(ball.number)),
                                                 contentDescription = "Ball ${ball.number}",
                                                 modifier = Modifier
                                                     .size(45.dp)
@@ -577,7 +620,7 @@ fun K3Ui60(
                                             .padding(horizontal = 20.dp, vertical = 16.dp)
                                     ) {
                                         Text(
-                                            text = (timeRemaining / 1000).toString(), // Convert millis to seconds
+                                            text = (timeRemaining / 1000).toString(),
                                             color = Color(0xFFFF6B35),
                                             fontSize = 32.sp,
                                             fontWeight = Bold
@@ -598,13 +641,13 @@ fun K3Ui60(
                         HistoryTabButton(
                             text = "Game History",
                             isSelected = selectedHistoryTab == "Game History",
-                            onClick = { viewModel.setActiveHistoryTab("Game History") }, // Use setActiveHistoryTab
+                            onClick = { viewModel.setActiveHistoryTab("Game History") },
                             modifier = Modifier.weight(1f)
                         )
                         HistoryTabButton(
                             text = "My History",
                             isSelected = selectedHistoryTab == "My History",
-                            onClick = { viewModel.setActiveHistoryTab("My History") }, // Use setActiveHistoryTab
+                            onClick = { viewModel.setActiveHistoryTab("My History") },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -677,7 +720,6 @@ fun K3Ui60(
                 onConfirmBet = { isSuccess, errorMessage ->
                     if (isSuccess) {
                         showSuccessMessage = true
-                        // Refresh My History after a successful bet
                         viewModel.fetchK3MyHistory()
                     } else {
                         android.util.Log.e("K3Ui60", "Bet placement failed: $errorMessage")

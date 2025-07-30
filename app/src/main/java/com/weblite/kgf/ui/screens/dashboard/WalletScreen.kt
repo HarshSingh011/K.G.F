@@ -78,7 +78,7 @@ fun MainWalletScreen(
     var userMobile by remember { mutableStateOf("") }
     var joiningDate by remember { mutableStateOf("") }
     var userLevel by remember { mutableStateOf("") }
-    var totalBalance by remember { mutableStateOf(0) }
+    var totalBalance by remember { mutableStateOf("") }
 
     val userid = SharedPrefManager.getString("user_id","0")
     LaunchedEffect(key1 = userid) {
@@ -92,7 +92,6 @@ fun MainWalletScreen(
             userLevel = result.levelUser.orEmpty()
             totalBalance = result.totalBalance
         }
-
     }
 
 
@@ -111,7 +110,7 @@ fun MainWalletScreen(
             }
 
             WalletScreen(
-                totalBalance = totalBalance.toString(),
+                totalBalance = totalBalance,
                 navController = localNavController,
                 onBackClick = { localNavController.popBackStack() },
                 onShowTopBar = onShowTopBar,

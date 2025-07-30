@@ -5,6 +5,7 @@ import com.weblite.kgf.data.K330GameHistoryResponse
 import com.weblite.kgf.data.K330MyHistoryResponse
 import com.weblite.kgf.data.K360PeriodIdResponse
 import com.weblite.kgf.data.GameK360BettingResponse
+import com.weblite.kgf.data.K3PopupHistoryResponse
 import retrofit2.Response
 import javax.inject.Inject
 
@@ -24,5 +25,18 @@ class K330GameRepository @Inject constructor(private val apiService: ApiService)
 
     suspend fun getK330MyHistory(userId: String): Response<K330MyHistoryResponse> {
         return apiService.getK330MyHistory(userId)
+    }
+
+    suspend fun getK330PopupHistory(userId: String): Result<K3PopupHistoryResponse> {
+        return try {
+            val response = apiService.getK330PopupHistory(userId)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Error: ${response.code()} ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }
