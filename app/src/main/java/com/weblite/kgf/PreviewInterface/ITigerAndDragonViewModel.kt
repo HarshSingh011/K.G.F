@@ -1,8 +1,8 @@
 package com.weblite.kgf.PreviewInterface
 
 import com.weblite.kgf.Api2.Resource
-import com.weblite.kgf.data.TigerAndDragonDataClasses.TigerGameHistoryResponse
-import com.weblite.kgf.data.TigerAndDragonDataClasses.TigerPeriodIdResponse
+import com.weblite.kgf.data.models.games.TigerGameHistoryResponse
+import com.weblite.kgf.data.models.games.TigerPeriodIdResponse
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 

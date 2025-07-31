@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.weblite.kgf.viewmodel.K330BettingViewModel // Use K330BettingViewModel
+import com.weblite.kgf.ui.screens.game.viewmodel.K330BettingViewModel // Use K330BettingViewModel
 import kotlinx.coroutines.launch
 
 @Composable

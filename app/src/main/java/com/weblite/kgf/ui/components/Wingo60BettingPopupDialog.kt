@@ -1,7 +1,6 @@
 package com.example.weblite.components
 
 
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,8 +29,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.weblite.kgf.ui.screens.game.getNumberBackgroundColor
-import com.weblite.kgf.viewmodel.Wingo60GameViewModel // Changed ViewModel
+import com.weblite.kgf.ui.screens.game.screens.getNumberBackgroundColor
+import com.weblite.kgf.ui.screens.game.viewmodel.Wingo60GameViewModel // Changed ViewModel
 import kotlinx.coroutines.launch
 
 @Composable

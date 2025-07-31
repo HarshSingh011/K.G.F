@@ -1,9 +1,9 @@
 package com.weblite.kgf.Api2
 
 import android.util.Log
-import com.google.gson.Gson
 import com.weblite.kgf.data.PeriodIdResponse
-import com.weblite.kgf.data.K3PopupHistoryResponse
+import com.weblite.kgf.data.models.games.K3PopupHistoryResponse
+import com.weblite.kgf.data.models.games.BettingGameResultResponse
 import retrofit2.Response
 import timber.log.Timber
 import javax.inject.Inject
@@ -12,7 +12,7 @@ class UserRepository @Inject constructor(
     private val apiService: ApiService
 ) {
     // --- Popup History API (added at the very end for clarity) ---
-    suspend fun getWingo30SecPopupHistory(userId: String): Result<com.weblite.kgf.data.Wingo30SecDataClasses.BettingGameResultResponse> {
+    suspend fun getWingo30SecPopupHistory(userId: String): Result<BettingGameResultResponse> {
         return try {
             val response = apiService.getWingo30SecPopupHistory(userId)
             if (response.isSuccessful && response.body() != null) {
@@ -26,7 +26,7 @@ class UserRepository @Inject constructor(
     }
 
     // --- Wingo 60 Popup History API ---
-    suspend fun getWingo60SecPopupHistory(userId: String): Result<com.weblite.kgf.data.Wingo30SecDataClasses.BettingGameResultResponse> {
+    suspend fun getWingo60SecPopupHistory(userId: String): Result<BettingGameResultResponse> {
         return try {
             val response = apiService.getWingo60SecPopupHistory(userId)
             if (response.isSuccessful && response.body() != null) {

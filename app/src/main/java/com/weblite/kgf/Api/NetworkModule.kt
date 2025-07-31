@@ -1,6 +1,7 @@
 // File: com.weblite.kgf.di.NetworkModule.kt
 package com.weblite.kgf.di
 
+
 import com.weblite.kgf.Api.TigerAndDragonApiService
 import com.weblite.kgf.Api2.ApiService
 import dagger.Module
@@ -52,4 +53,9 @@ object NetworkModule {
     @Singleton
     fun provideTigerAndDragonApiService(retrofit: Retrofit): TigerAndDragonApiService =
         retrofit.create(TigerAndDragonApiService::class.java)
+
+    @Provides
+    @Singleton
+    fun providePaymentApiService(retrofit: Retrofit): PaymentApiService =
+        retrofit.create(PaymentApiService::class.java)
 }

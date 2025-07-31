@@ -1,10 +1,10 @@
 package com.weblite.kgf.Api
 
-import com.weblite.kgf.data.TigerAndDragonDataClasses.DragonTigerBetRequest
-import com.weblite.kgf.data.TigerAndDragonDataClasses.DragonTigerBetResponse
-import com.weblite.kgf.data.TigerAndDragonDataClasses.TigerPeriodIdResponse
-import com.weblite.kgf.data.TigerAndDragonDataClasses.TigerGameHistoryResponse
-import com.weblite.kgf.data.TigerAndDragonDataClasses.MyHistoryApiResponse
+import com.weblite.kgf.data.models.games.DragonTigerBetRequest
+import com.weblite.kgf.data.models.games.DragonTigerBetResponse
+import com.weblite.kgf.data.models.games.TigerPeriodIdResponse
+import com.weblite.kgf.data.models.games.TigerGameHistoryResponse
+import com.weblite.kgf.data.models.games.MyHistoryApiResponse
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST

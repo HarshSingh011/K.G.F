@@ -8,12 +8,13 @@ import com.weblite.kgf.data.PeriodIdResponse
 import com.weblite.kgf.data.K360GameHistoryResponse
 import com.weblite.kgf.data.K360MyHistoryResponse
 import com.weblite.kgf.data.K360PeriodIdResponse
-import com.weblite.kgf.data.K3PopupHistoryResponse
-import com.weblite.kgf.data.Wingo60SecDataClasses.Game60SecBettingResponse
-import com.weblite.kgf.data.Wingo60SecDataClasses.GameBet60Sec
-import com.weblite.kgf.data.Wingo60SecDataClasses.GameHistory60SecResponse
-import com.weblite.kgf.data.Wingo60SecDataClasses.Wingo60PeriodIdResponse
-import com.weblite.kgf.data.Wingo60SecDataClasses.Wingo60SecMyHistoryResponse
+import com.weblite.kgf.data.models.games.K3PopupHistoryResponse
+import com.weblite.kgf.data.models.games.Game60SecBettingResponse
+import com.weblite.kgf.data.models.games.GameBet60Sec
+import com.weblite.kgf.data.models.games.GameHistory60SecResponse
+import com.weblite.kgf.data.models.games.Wingo60PeriodIdResponse
+import com.weblite.kgf.data.models.games.Wingo60SecMyHistoryResponse
+import com.weblite.kgf.data.models.games.BettingGameResultResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -71,7 +72,7 @@ interface ApiService {
 
     // Wingo 30-sec popup history API
     @GET("web/Api/wingo30secPopupHistoryApi")
-    suspend fun getWingo30SecPopupHistory(@Query("user_id") userId: String): Response<com.weblite.kgf.data.Wingo30SecDataClasses.BettingGameResultResponse>
+    suspend fun getWingo30SecPopupHistory(@Query("user_id") userId: String): Response<BettingGameResultResponse>
 
     // Wingo 60-second game APIs
     @GET("web/Api/wingo1MinPeriodID")
@@ -88,7 +89,7 @@ interface ApiService {
 
     // Wingo 60-sec popup history API - using the provided endpoint and same data class as Wingo30
     @GET("web/Api/wingo60secPopupHistoryApi")
-    suspend fun getWingo60SecPopupHistory(@Query("user_id") userId: String): Response<com.weblite.kgf.data.Wingo30SecDataClasses.BettingGameResultResponse>
+    suspend fun getWingo60SecPopupHistory(@Query("user_id") userId: String): Response<BettingGameResultResponse>
 
     // K3 1-minute game APIs
     @GET("web/Api/k31MinperiodID")

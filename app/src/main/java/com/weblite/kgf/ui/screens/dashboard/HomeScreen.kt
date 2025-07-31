@@ -1,8 +1,6 @@
 package com.weblite.kgf.ui.screens.dashboard
 
-import android.content.Context
 import android.media.MediaPlayer
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -52,15 +50,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.weblite.kgf.Api2.MainViewModel
 import com.weblite.kgf.Api2.Resource
 import com.weblite.kgf.Api2.SharedPrefManager
-import com.weblite.kgf.Api2.WingoTimerService
 import com.weblite.kgf.R
 import com.weblite.kgf.data.EarningUser
 import com.weblite.kgf.data.Winner
@@ -77,15 +72,14 @@ import com.weblite.kgf.ui.components.UserWalletCards
 import com.weblite.kgf.ui.components.WINGO_30
 import com.weblite.kgf.ui.components.WINGO_60
 import com.weblite.kgf.ui.components.WinningInfoSection
-import com.weblite.kgf.ui.screens.game.K3Ui30
-import com.weblite.kgf.ui.screens.game.K3Ui60
-import com.weblite.kgf.ui.screens.game.TigerAndDragonGameScreen
-import com.weblite.kgf.ui.screens.game.Wingo30Screen
-import com.weblite.kgf.ui.screens.game.Wingo60Screen
+import com.weblite.kgf.ui.screens.game.screens.K3Ui30
+import com.weblite.kgf.ui.screens.game.screens.K3Ui60
+import com.weblite.kgf.ui.screens.game.screens.TigerAndDragonGameScreen
+import com.weblite.kgf.ui.screens.game.screens.Wingo30Screen
+import com.weblite.kgf.ui.screens.game.screens.Wingo60Screen
 import com.weblite.kgf.utils.AssetImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

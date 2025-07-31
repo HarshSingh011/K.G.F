@@ -23,14 +23,13 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.weblite.kgf.ui.screens.game.getNumberBackgroundColor
-import com.weblite.kgf.viewmodel.WingoGameViewModel
+import com.weblite.kgf.ui.screens.game.screens.getNumberBackgroundColor
+import com.weblite.kgf.ui.screens.game.viewmodel.WingoGameViewModel
 import kotlinx.coroutines.launch
 
 @Composable
