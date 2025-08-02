@@ -1,4 +1,3 @@
-package com.weblite.kgf.ui.screens.payScreens.history
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -38,6 +37,7 @@ class DepositHistoryViewModel @Inject constructor(
             } catch (e: Exception) {
                 _error.value = e.localizedMessage ?: "Unknown error"
             } finally {
+// Duplicate file removed to resolve redeclaration error.
                 _loading.value = false
             }
         }

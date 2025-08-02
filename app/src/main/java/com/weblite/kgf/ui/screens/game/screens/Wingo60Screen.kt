@@ -28,8 +28,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Scaffold
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import com.weblite.kgf.ui.components.PaginationNavButton
+import com.weblite.kgf.ui.components.PaginationState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -75,6 +76,7 @@ import com.weblite.kgf.Api2.Resource
 import com.weblite.kgf.ui.screens.game.viewmodel.Wingo60GameViewModel
 import kotlinx.coroutines.delay
 import android.util.Log
+import androidx.compose.material3.Button
 import com.weblite.kgf.Api2.MainViewModel
 import com.weblite.kgf.Api2.SharedPrefManager
 import com.weblite.kgf.data.models.games.BettingGameResultResponse
@@ -114,6 +116,9 @@ fun Wingo60Screen(
     val gameHistoryResource by viewModel.gameHistoryResponse.collectAsStateWithLifecycle()
     val myHistoryResource by viewModel.myHistoryResponse.collectAsStateWithLifecycle()
     val selectedHistoryTab by viewModel.selectedHistoryTab.collectAsStateWithLifecycle()
+    // Pagination state for each tab
+    var gameHistoryPagination by remember { mutableStateOf(PaginationState()) }
+    var myHistoryPagination by remember { mutableStateOf(PaginationState()) }
 
     // --- Win Dialog State (new logic) ---
     var showWinDialog by remember { mutableStateOf(false) }
@@ -199,7 +204,7 @@ fun Wingo60Screen(
     }
 
     // Convert Game History API response to table data
-    val gameHistoryData = remember(gameHistoryResource) {
+    val gameHistoryRaw = remember(gameHistoryResource) {
         when (val resource = gameHistoryResource) {
             is Resource.Loading -> listOf(
                 listOf("Loading...", "Loading...", "Loading...", "Loading...")
@@ -226,8 +231,7 @@ fun Wingo60Screen(
         }
     }
 
-    // Convert My History API response to table data
-    val myHistoryData = remember(myHistoryResource) {
+    val myHistoryRaw = remember(myHistoryResource) {
         when (val resource = myHistoryResource) {
             is Resource.Loading -> listOf(
                 listOf("Loading...", "Loading...", "Loading...", "Loading...", "Loading...")
@@ -251,6 +255,27 @@ fun Wingo60Screen(
             )
         }
     }
+
+    // Update pagination state when data changes
+    LaunchedEffect(gameHistoryRaw) {
+        val totalPages = (gameHistoryRaw.size + gameHistoryPagination.itemsPerPage - 1) / gameHistoryPagination.itemsPerPage
+        if (gameHistoryPagination.currentPage > totalPages) {
+            gameHistoryPagination = gameHistoryPagination.copy(currentPage = 1, totalPages = totalPages)
+        } else {
+            gameHistoryPagination = gameHistoryPagination.copy(totalPages = totalPages)
+        }
+    }
+    LaunchedEffect(myHistoryRaw) {
+        val totalPages = (myHistoryRaw.size + myHistoryPagination.itemsPerPage - 1) / myHistoryPagination.itemsPerPage
+        if (myHistoryPagination.currentPage > totalPages) {
+            myHistoryPagination = myHistoryPagination.copy(currentPage = 1, totalPages = totalPages)
+        } else {
+            myHistoryPagination = myHistoryPagination.copy(totalPages = totalPages)
+        }
+    }
+
+    val gameHistoryData = gameHistoryPagination.pagedItems(gameHistoryRaw)
+    val myHistoryData = myHistoryPagination.pagedItems(myHistoryRaw)
 
     val numberItems = remember {
         listOf(
@@ -771,33 +796,39 @@ fun Wingo60Screen(
 
             // Pagination
             item {
+                val (pagination, setPagination) = when (selectedHistoryTab) {
+                    "Game History" -> Pair(gameHistoryPagination, { p: PaginationState -> gameHistoryPagination = p })
+                    "My History" -> Pair(myHistoryPagination, { p: PaginationState -> myHistoryPagination = p })
+                    else -> Pair(gameHistoryPagination, { p: PaginationState -> gameHistoryPagination = p })
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
-                        onClick = { },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Previous", color = Color.White, fontSize = 14.sp)
-                    }
-
+                    PaginationNavButton(
+                        text = "Previous",
+                        onClick = {
+                            if (pagination.currentPage > 1) setPagination(pagination.copy(currentPage = pagination.currentPage - 1))
+                        },
+                        enabled = pagination.currentPage > 1,
+                        isPrimary = false
+                    )
                     Text(
-                        text = "Page 1 / 2",
+                        text = "Page ${pagination.currentPage} / ${pagination.totalPages}",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = Color.Black,
+                        modifier = Modifier.padding(horizontal = 16.dp)
                     )
-
-                    Button(
-                        onClick = { },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6B35)),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Next", color = Color.White, fontSize = 14.sp)
-                    }
+                    PaginationNavButton(
+                        text = "Next",
+                        onClick = {
+                            if (pagination.currentPage < pagination.totalPages) setPagination(pagination.copy(currentPage = pagination.currentPage + 1))
+                        },
+                        enabled = pagination.currentPage < pagination.totalPages,
+                        isPrimary = true
+                    )
                 }
             }
         }

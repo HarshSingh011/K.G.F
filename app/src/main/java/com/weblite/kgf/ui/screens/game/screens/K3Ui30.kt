@@ -75,11 +75,13 @@ import com.example.weblite.components.CompactExcelTableforK3
 import com.example.weblite.components.MyHistoryTableforK3
 import com.weblite.kgf.data.models.games.K3PopupHistoryResponse
 import com.weblite.kgf.ui.components.K330BettingPopupDialog
+import com.weblite.kgf.ui.components.PaginationState
 import com.weblite.kgf.utils.DiceUtils
 import kotlinx.coroutines.delay
 import com.weblite.kgf.utils.K3Utils
 import com.weblite.kgf.utils.K3Ball
 import com.weblite.kgf.utils.K3BetOption
+
 
 @SuppressLint("LogNotTimber")
 @RequiresApi(Build.VERSION_CODES.O)
@@ -119,35 +121,9 @@ fun K3Ui30(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    val showCountdownOverlay = timeRemaining <= 5000L && timeRemaining > 0L
-    var lastTimeRemaining by remember { mutableStateOf(timeRemaining) }
 
-    val k3Balls = listOf(
-        K3Ball(3, "207.36X", Color(0xFFE53935)),
-        K3Ball(4, "69.12X", Color(0xFF4CAF50)),
-        K3Ball(5, "34.56X", Color(0xFFE53935)),
-        K3Ball(6, "20.74X", Color(0xFF4CAF50)),
-        K3Ball(7, "13.83X", Color(0xFFE53935)),
-        K3Ball(8, "9.88X", Color(0xFF4CAF50)),
-        K3Ball(9, "8.3X", Color(0xFFE53935)),
-        K3Ball(10, "7.64X", Color(0xFF4CAF50)),
-        K3Ball(11, "7.64X", Color(0xFFE53935)),
-        K3Ball(12, "8.3X", Color(0xFF4CAF50)),
-        K3Ball(13, "9.88X", Color(0xFFE53935)),
-        K3Ball(14, "13.83X", Color(0xFF4CAF50)),
-        K3Ball(15, "20.74X", Color(0xFFE53935)),
-        K3Ball(16, "34.56X", Color(0xFF4CAF50)),
-        K3Ball(17, "69.12X", Color(0xFFE53935)),
-        K3Ball(18, "207.36X", Color(0xFF4CAF50))
-    )
 
-    val betOptions = listOf(
-        K3BetOption("Big", "1.92X", Color(0xFFE53935)),
-        K3BetOption("Small", "1.92X", Color(0xFF4CAF50)),
-        K3BetOption("Odd", "1.92X", Color(0xFFFFC107)),
-        K3BetOption("Even", "1.92X", Color(0xFF2196F3))
-    )
-
+    // Data for paginated tables (for table display only)
     val k3GameHistoryData = remember(gameHistoryResource) {
         when (val resource = gameHistoryResource) {
             is Resource.Loading -> listOf(
@@ -198,6 +174,7 @@ fun K3Ui30(
     }
 
     // --- All helper functions below variables ---
+    // Dice and WinDialog logic must use raw API data, not paginated/mapped data
     fun updateDiceFromHistory() {
         // Use the second element (index 1) of the game history list for dice logic
         val (period, numberRaw, itemRaw) = when (val resource = gameHistoryResource) {
@@ -222,6 +199,87 @@ fun K3Ui30(
             Log.d("Dice_Number", "No valid number/bidNum found, keeping previous dice: $displayedDice")
         }
     }
+
+    // --- All LaunchedEffects and logic below functions ---
+    LaunchedEffect(Unit) {
+        viewModel.fetchK3GameHistory()
+        updateDiceFromHistory()
+    }
+
+    LaunchedEffect(timeRemaining, gameHistoryResource) {
+        if (lastTimeRemainingForDice < timeRemaining) {
+            viewModel.fetchK3GameHistory()
+            // Wait for gameHistoryResource to update, then update dice
+            // (gameHistoryResource is a StateFlow, so this effect will rerun)
+        }
+        updateDiceFromHistory()
+        lastTimeRemainingForDice = timeRemaining
+    }
+
+    LaunchedEffect(popupHistoryResponse) {
+        android.util.Log.d("Full popup history API response", "$popupHistoryResponse")
+        android.util.Log.d("K3WinDialog", "popupHistoryResponse: $popupHistoryResponse")
+        val winAmount = popupHistoryResponse?.result?.total_winning_amount ?: 0.0
+        android.util.Log.d("K3WinDialog", "total_winning_amount: $winAmount (from result.total_winning_amount)")
+        if (winAmount > 0.0) {
+            winDialogData = popupHistoryResponse
+            showWinDialog = true
+            android.util.Log.d("K3WinDialog", "Showing Win Dialog, total_winning_amount: $winAmount")
+            delay(2000)
+            showWinDialog = false
+        } else {
+            showWinDialog = false
+            android.util.Log.d("K3WinDialog", "Not showing Win Dialog, total_winning_amount: $winAmount")
+        }
+    }
+
+    // Pagination states for both tabs
+    var gameHistoryPagination by remember { mutableStateOf(PaginationState()) }
+    var myHistoryPagination by remember { mutableStateOf(PaginationState()) }
+    // Update totalPages when data changes
+    LaunchedEffect(k3GameHistoryData) {
+        val totalPages = (k3GameHistoryData.size + gameHistoryPagination.itemsPerPage - 1) / gameHistoryPagination.itemsPerPage
+        if (gameHistoryPagination.totalPages != totalPages) {
+            gameHistoryPagination = gameHistoryPagination.copy(totalPages = totalPages, currentPage = 1)
+        }
+    }
+    LaunchedEffect(k3MyHistoryData) {
+        val totalPages = (k3MyHistoryData.size + myHistoryPagination.itemsPerPage - 1) / myHistoryPagination.itemsPerPage
+        if (myHistoryPagination.totalPages != totalPages) {
+            myHistoryPagination = myHistoryPagination.copy(totalPages = totalPages, currentPage = 1)
+        }
+    }
+
+    val showCountdownOverlay = timeRemaining <= 5000L && timeRemaining > 0L
+    var lastTimeRemaining by remember { mutableStateOf(timeRemaining) }
+
+    val k3Balls = listOf(
+        K3Ball(3, "207.36X", Color(0xFFE53935)),
+        K3Ball(4, "69.12X", Color(0xFF4CAF50)),
+        K3Ball(5, "34.56X", Color(0xFFE53935)),
+        K3Ball(6, "20.74X", Color(0xFF4CAF50)),
+        K3Ball(7, "13.83X", Color(0xFFE53935)),
+        K3Ball(8, "9.88X", Color(0xFF4CAF50)),
+        K3Ball(9, "8.3X", Color(0xFFE53935)),
+        K3Ball(10, "7.64X", Color(0xFF4CAF50)),
+        K3Ball(11, "7.64X", Color(0xFFE53935)),
+        K3Ball(12, "8.3X", Color(0xFF4CAF50)),
+        K3Ball(13, "9.88X", Color(0xFFE53935)),
+        K3Ball(14, "13.83X", Color(0xFF4CAF50)),
+        K3Ball(15, "20.74X", Color(0xFFE53935)),
+        K3Ball(16, "34.56X", Color(0xFF4CAF50)),
+        K3Ball(17, "69.12X", Color(0xFFE53935)),
+        K3Ball(18, "207.36X", Color(0xFF4CAF50))
+    )
+
+    val betOptions = listOf(
+        K3BetOption("Big", "1.92X", Color(0xFFE53935)),
+        K3BetOption("Small", "1.92X", Color(0xFF4CAF50)),
+        K3BetOption("Odd", "1.92X", Color(0xFFFFC107)),
+        K3BetOption("Even", "1.92X", Color(0xFF2196F3))
+    )
+
+    // ...existing code...
 
     // --- All LaunchedEffects and logic below functions ---
     LaunchedEffect(Unit) {
@@ -713,44 +771,50 @@ fun K3Ui30(
                 item {
                     when (activeHistoryTab) {
                         "Game History" -> {
-                            CompactExcelTableforK3(data = k3GameHistoryData)
+                            CompactExcelTableforK3(data = gameHistoryPagination.pagedItems(k3GameHistoryData))
                         }
 
                         "My History" -> {
-                            MyHistoryTableforK3(data = k3MyHistoryData)
+                            MyHistoryTableforK3(data = myHistoryPagination.pagedItems(k3MyHistoryData))
                         }
                     }
                 }
 
                 // Pagination
                 item {
+                    val (pagination, setPagination) = when (activeHistoryTab) {
+                        "Game History" -> Pair(gameHistoryPagination, { p: PaginationState -> gameHistoryPagination = p })
+                        "My History" -> Pair(myHistoryPagination, { p: PaginationState -> myHistoryPagination = p })
+                        else -> Pair(gameHistoryPagination, { p: PaginationState -> gameHistoryPagination = p })
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Button(
-                            onClick = { },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("Previous", color = Color.White, fontSize = 14.sp)
-                        }
-
+                        com.weblite.kgf.ui.components.PaginationNavButton(
+                            text = "Previous",
+                            onClick = {
+                                if (pagination.currentPage > 1) setPagination(pagination.copy(currentPage = pagination.currentPage - 1))
+                            },
+                            enabled = pagination.currentPage > 1,
+                            isPrimary = false
+                        )
                         Text(
-                            text = "Page 1 / 27",
+                            text = "Page ${pagination.currentPage} / ${pagination.totalPages}",
                             fontSize = 16.sp,
                             fontWeight = Bold,
-                            color = Color.Black
+                            color = Color.Black,
+                            modifier = Modifier.padding(horizontal = 16.dp)
                         )
-
-                        Button(
-                            onClick = { },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6B35)),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("Next", color = Color.White, fontSize = 14.sp)
-                        }
+                        com.weblite.kgf.ui.components.PaginationNavButton(
+                            text = "Next",
+                            onClick = {
+                                if (pagination.currentPage < pagination.totalPages) setPagination(pagination.copy(currentPage = pagination.currentPage + 1))
+                            },
+                            enabled = pagination.currentPage < pagination.totalPages,
+                            isPrimary = true
+                        )
                     }
                 }
             }

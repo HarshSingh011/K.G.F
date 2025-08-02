@@ -62,12 +62,16 @@ import com.weblite.kgf.ui.screens.KGFLogoText
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.weblite.kgf.Api2.Resource
+import com.weblite.kgf.data.K360GameHistoryItem
+import com.weblite.kgf.data.K360MyHistoryItem
 import com.weblite.kgf.data.models.games.K3PopupHistoryResponse
 import com.weblite.kgf.ui.screens.game.viewmodel.K360GameViewModel
 import kotlinx.coroutines.delay
 import com.weblite.kgf.utils.K3Utils
 import com.weblite.kgf.utils.K3Ball
 import com.weblite.kgf.utils.K3BetOption
+import com.weblite.kgf.ui.components.PaginationState
+import com.weblite.kgf.ui.components.PaginationNavButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,12 +82,94 @@ fun K3Ui60(
     onShowBottomBar: (Boolean) -> Unit,
     viewModel: K360GameViewModel = hiltViewModel()
 ) {
+    // Pagination states for both tabs
+    var gameHistoryPagination by remember { mutableStateOf(PaginationState()) }
+    var myHistoryPagination by remember { mutableStateOf(PaginationState()) }
+
     // --- All state and variables at the top ---
     val k3PeriodId by viewModel.k3PeriodId.collectAsStateWithLifecycle()
     val timeRemaining by viewModel.k3TimeRemaining.collectAsStateWithLifecycle()
     val gameHistoryResource by viewModel.k3GameHistory.collectAsStateWithLifecycle()
     val myHistoryResource by viewModel.k3MyHistory.collectAsStateWithLifecycle()
     val selectedHistoryTab by viewModel.activeHistoryTab.collectAsStateWithLifecycle()
+
+    // Data for tables (must be declared after state)
+    val k3GameHistoryData = remember(gameHistoryResource) {
+        when (val resource = gameHistoryResource) {
+            is Resource.Loading<*> -> listOf(
+                listOf("Loading...", "Loading...", "Loading...", "Loading...")
+            )
+            is Resource.Success<*> -> {
+                @Suppress("UNCHECKED_CAST")
+                val data = (resource as? Resource.Success<List<K360GameHistoryItem>>)?.data
+                data?.mapIndexed { index, historyItem ->
+                    if (index == 0 && (historyItem.number.isEmpty() && historyItem.oddEven.isEmpty() && historyItem.bigSmall.isEmpty())) {
+                        listOf(
+                            historyItem.datetime,
+                            "Loading...",
+                            "Loading...",
+                            "Loading..."
+                        )
+                    } else {
+                        listOf(
+                            historyItem.datetime,
+                            historyItem.number,
+                            historyItem.oddEven,
+                            historyItem.bigSmall
+                        )
+                    }
+                } ?: listOf(listOf("No Data", "No Data", "No Data", "No Data"))
+            }
+            is Resource.Error<*> -> listOf(
+                listOf("Error", "Error", "Error", "Error")
+            )
+            else -> listOf(
+                listOf("Loading...", "Loading...", "Loading...", "Loading...")
+            )
+        }
+    }
+
+    val k3MyHistoryData = remember(myHistoryResource) {
+        when (val resource = myHistoryResource) {
+            is Resource.Loading<*> -> listOf(
+                listOf("Loading...", "Loading...", "Loading...", "Loading...", "Loading...")
+            )
+            is Resource.Success<*> -> {
+                @Suppress("UNCHECKED_CAST")
+                val data = (resource as? Resource.Success<List<K360MyHistoryItem>>)?.data
+                data?.map { historyItem ->
+                    listOf(
+                        historyItem.period,
+                        historyItem.bidNum,
+                        historyItem.price,
+                        historyItem.status,
+                        historyItem.totalamount
+                    )
+                } ?: listOf(listOf("No Data", "No Data", "No Data", "No Data", "No Data"))
+            }
+            is Resource.Error<*> -> listOf(
+                listOf("Error", "Error", "Error", "Error", "Error")
+            )
+            else -> listOf(
+                listOf("Loading...", "Loading...", "Loading...", "Loading...", "Loading...")
+            )
+        }
+    }
+
+    // Update totalPages when data changes
+    LaunchedEffect(k3GameHistoryData) {
+        val totalPages = (k3GameHistoryData.size + gameHistoryPagination.itemsPerPage - 1) / gameHistoryPagination.itemsPerPage
+        if (gameHistoryPagination.totalPages != totalPages) {
+            gameHistoryPagination = gameHistoryPagination.copy(totalPages = totalPages, currentPage = 1)
+        }
+    }
+    LaunchedEffect(k3MyHistoryData) {
+        val totalPages = (k3MyHistoryData.size + myHistoryPagination.itemsPerPage - 1) / myHistoryPagination.itemsPerPage
+        if (myHistoryPagination.totalPages != totalPages) {
+            myHistoryPagination = myHistoryPagination.copy(totalPages = totalPages, currentPage = 1)
+        }
+    }
+    // ...existing code...
 
     var displayedDice by remember { mutableStateOf(listOf(1, 1, 1)) }
     var lastTimeRemainingForDice by remember { mutableStateOf(timeRemaining) }
@@ -128,8 +214,9 @@ fun K3Ui60(
     fun updateDiceFromHistory() {
         // Use the second element (index 1) of the game history list for dice logic, like K3Ui30
         val (period, numberRaw, itemRaw) = when (val resource = gameHistoryResource) {
-            is Resource.Success -> {
-                val item = resource.data?.getOrNull(1)
+            is Resource.Success<*> -> {
+                @Suppress("UNCHECKED_CAST")
+                val item = (resource as? Resource.Success<List<K360GameHistoryItem>>)?.data?.getOrNull(1)
                 if (item != null) {
                     Triple(item.datetime, item.number, item)
                 } else Triple(null, null, null)
@@ -238,64 +325,6 @@ fun K3Ui60(
         K3BetOption("Odd", "1.92X", Color(0xFFFFC107)),
         K3BetOption("Even", "1.92X", Color(0xFF2196F3))
     )
-
-    val k3GameHistoryData = remember(gameHistoryResource) {
-        when (val resource = gameHistoryResource) {
-            is Resource.Loading -> listOf(
-                listOf("Loading...", "Loading...", "Loading...", "Loading...")
-            )
-            is Resource.Success -> {
-                resource.data?.mapIndexed { index, historyItem ->
-                    if (index == 0 && historyItem.number.isEmpty() && historyItem.oddEven.isEmpty() && historyItem.bigSmall.isEmpty()) {
-                        listOf(
-                            historyItem.datetime,
-                            "Loading...",
-                            "Loading...",
-                            "Loading..."
-                        )
-                    } else {
-                        listOf(
-                            historyItem.datetime,
-                            historyItem.number,
-                            historyItem.oddEven,
-                            historyItem.bigSmall
-                        )
-                    }
-                } ?: listOf(listOf("No Data", "No Data", "No Data", "No Data"))
-            }
-            is Resource.Error -> listOf(
-                listOf("Error", "Error", "Error", "Error")
-            )
-            else -> listOf(
-                listOf("Loading...", "Loading...", "Loading...", "Loading...")
-            )
-        }
-    }
-
-    val k3MyHistoryData = remember(myHistoryResource) {
-        when (val resource = myHistoryResource) {
-            is Resource.Loading -> listOf(
-                listOf("Loading...", "Loading...", "Loading...", "Loading...", "Loading...")
-            )
-            is Resource.Success -> {
-                resource.data?.map { historyItem ->
-                    listOf(
-                        historyItem.period,
-                        historyItem.bidNum,
-                        historyItem.price,
-                        historyItem.status,
-                        historyItem.totalamount
-                    )
-                } ?: listOf(listOf("No Data", "No Data", "No Data", "No Data", "No Data"))
-            }
-            is Resource.Error -> listOf(
-                listOf("Error", "Error", "Error", "Error", "Error")
-            )
-            else -> listOf(
-                listOf("Loading...", "Loading...", "Loading...", "Loading...", "Loading...")
-            )
-        }
-    }
 
     LaunchedEffect(Unit) {
         onShowTopBar(false)
@@ -710,44 +739,50 @@ fun K3Ui60(
                 item {
                     when (selectedHistoryTab) {
                         "Game History" -> {
-                            CompactExcelTableforK3(data = k3GameHistoryData)
+                            CompactExcelTableforK3(data = gameHistoryPagination.pagedItems(k3GameHistoryData))
                         }
 
                         "My History" -> {
-                            MyHistoryTableforK3(data = k3MyHistoryData)
+                            MyHistoryTableforK3(data = myHistoryPagination.pagedItems(k3MyHistoryData))
                         }
                     }
                 }
 
                 // Pagination
                 item {
+                    val (pagination, setPagination) = when (selectedHistoryTab) {
+                        "Game History" -> Pair(gameHistoryPagination, { p: PaginationState -> gameHistoryPagination = p })
+                        "My History" -> Pair(myHistoryPagination, { p: PaginationState -> myHistoryPagination = p })
+                        else -> Pair(gameHistoryPagination, { p: PaginationState -> gameHistoryPagination = p })
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Button(
-                            onClick = { },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("Previous", color = Color.White, fontSize = 14.sp)
-                        }
-
+                        PaginationNavButton(
+                            text = "Previous",
+                            onClick = {
+                                if (pagination.currentPage > 1) setPagination(pagination.copy(currentPage = pagination.currentPage - 1))
+                            },
+                            enabled = pagination.currentPage > 1,
+                            isPrimary = false
+                        )
                         Text(
-                            text = "Page 1 / 27",
+                            text = "Page ${pagination.currentPage} / ${pagination.totalPages}",
                             fontSize = 16.sp,
                             fontWeight = Bold,
-                            color = Color.Black
+                            color = Color.Black,
+                            modifier = Modifier.padding(horizontal = 16.dp)
                         )
-
-                        Button(
-                            onClick = { },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6B35)),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("Next", color = Color.White, fontSize = 14.sp)
-                        }
+                        PaginationNavButton(
+                            text = "Next",
+                            onClick = {
+                                if (pagination.currentPage < pagination.totalPages) setPagination(pagination.copy(currentPage = pagination.currentPage + 1))
+                            },
+                            enabled = pagination.currentPage < pagination.totalPages,
+                            isPrimary = true
+                        )
                     }
                 }
             }
