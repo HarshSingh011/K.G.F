@@ -15,12 +15,9 @@ import javax.inject.Inject
 @HiltViewModel
 class WingoViewModel @Inject constructor(
     private val repository: UserRepository,
-    private val timerService: WingoTimerService
 ) : ViewModel() {
 
     // Expose timer service states
-    val timeRemaining: StateFlow<Int> = timerService.timeRemaining
-    val currentPeriod: StateFlow<String> = timerService.currentPeriod
 
     // Game History State
     private val _gameHistoryResponse = MutableStateFlow<Resource<GameHistoryResponse>?>(null)
@@ -34,25 +31,19 @@ class WingoViewModel @Inject constructor(
     private var gameHistoryPollingJob: kotlinx.coroutines.Job? = null
 
     init {
-        // Fetch initial data and start timer
-//        viewModelScope.launch {
-//            timerService.fetchInitialData()
-//            timerService.startTimer()
-//        }
-
         // Fetch game history initially
         fetchGameHistory()
         // Fetch my history initially
         fetchMyHistory()
 
         // Listen for timer cycle completions to auto-refresh data
-        viewModelScope.launch {
-            timerService.onTimerCycleComplete.collect {
-                // Refresh data every time timer cycle completes (every 30 seconds)
-                fetchGameHistory()
-                fetchMyHistory()
-            }
-        }
+//        viewModelScope.launch {
+//            timerService.onTimerCycleComplete.collect {
+//                // Refresh data every time timer cycle completes (every 30 seconds)
+//                fetchGameHistory()
+//                fetchMyHistory()
+//            }
+//        }
     }
 
     // Call this when navigating to game screen
@@ -189,7 +180,7 @@ class WingoViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         gameHistoryPollingJob?.cancel()
-        timerService.stopTimer()
+//        timerService.stopTimer()
     }
 }
 

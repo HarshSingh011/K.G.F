@@ -148,6 +148,7 @@ fun ProfileScreen(
         composable(ON_DEPOSIT) {
             DepositScreen(
                 balance = "₹ 17,511,164.75",
+                navController = localNavController,
                 onBackClick = { localNavController.popBackStack() },
                 onShowTopBar = { onShowTopBar(it) },
                 onShowBottomBar = { onShowBottomBar(it) },

@@ -68,7 +68,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation:1.6.0")
     //coil
     implementation("io.coil-kt:coil-compose:2.4.0")
-    implementation ("androidx.navigation:navigation-compose:2.7.5" )
+    implementation ("androidx.navigation:navigation-compose:2.7.7" )
 
     // Lifecycle components
     implementation ("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")

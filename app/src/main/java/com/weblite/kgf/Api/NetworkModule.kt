@@ -2,6 +2,7 @@
 package com.weblite.kgf.di
 
 
+import com.weblite.kgf.Api.PaymentApiService
 import com.weblite.kgf.Api.TigerAndDragonApiService
 import com.weblite.kgf.Api2.ApiService
 import dagger.Module

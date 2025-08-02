@@ -93,10 +93,8 @@ fun AuthFlowScreen(
                 val userName = loginState.data?.result?.user?.name ?: "User"
                 val userid = loginState.data?.result?.user?.userId ?: "null"
 
+                SharedPrefManager.setString("user_id", userid)
 
-                SharedPrefManager.setString("user_id",userid)
-
-                //MainScreen()// @Composable invocations can only happen from the context of a @Composable function
                 Toast.makeText(context, "Login Successful : ${userName}", Toast.LENGTH_SHORT).show()
                 viewModel.resetLoginState()
                 onLoginSuccess()

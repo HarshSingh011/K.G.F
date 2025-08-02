@@ -27,14 +27,16 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.flow.collectAsState
 import com.weblite.kgf.ui.screens.payScreens.DepositViewModel
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.weblite.kgf.R
+import com.weblite.kgf.navigation.AppRoutes.PAYMENT_DEPOSIT
 
 @Composable
 fun DepositScreen(
     balance: String = "₹ 17,511,164.75",
+    navController: NavHostController,
     onBackClick: () -> Unit = {},
     onHistoryClick: () -> Unit = {},
     onShowTopBar: (Boolean) -> Unit,
@@ -237,7 +239,7 @@ fun DepositScreen(
         DepositAmountSection(
             onDepositClick = { amt ->
                 depositViewModel.setAmount(amt)
-                showDialog = true
+                navController.navigate("payment_deposit/$amt")
                 Toast.makeText(context, "Depositing ₹$amt", Toast.LENGTH_SHORT).show()
             }
         )
@@ -245,13 +247,6 @@ fun DepositScreen(
 
         RechargeInstructionsSection()
 
-        if (showDialog) {
-            PaymentDepositDialog(
-                amount = "₹ %.2f".format(amount.toDouble()),
-                onDismiss = { showDialog = false },
-                showNoUpi = true
-            )
-        }
 
     }
 }
@@ -424,15 +419,15 @@ fun RechargeInstructionsSection() {
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun DepositScreenPreview() {
-    val fakeViewModel = DepositViewModel()
-    DepositScreen(
-        onShowTopBar = {},
-        onShowBottomBar = {},
-        onBackClick = {},
-        onHistoryClick = {},
-        depositViewModel = fakeViewModel
-    )
-}
+//@Preview(showBackground = true)
+//@Composable
+//fun DepositScreenPreview() {
+//    val fakeViewModel = DepositViewModel()
+//    DepositScreen(
+//        onShowTopBar = {},
+//        onShowBottomBar = {},
+//        onBackClick = {},
+//        onHistoryClick = {},
+//        depositViewModel = fakeViewModel
+//    )
+//}

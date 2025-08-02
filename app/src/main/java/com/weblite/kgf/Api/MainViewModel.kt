@@ -18,8 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val repository: UserRepository,
-    val timerService: WingoTimerService
+    private val repository: UserRepository
 ) : ViewModel() {
     private val _profileResponse = MutableStateFlow<ProfileResponse?>(null)
     val profileResponse: StateFlow<ProfileResponse?> = _profileResponse
@@ -39,6 +38,8 @@ class MainViewModel @Inject constructor(
                 if (response.isSuccessful) {
                     response.body()?.let {
                         Log.d("LOGIN_RESPONSE", "Success: $it")
+                        // Save the phone number used in the login POST request
+                        com.weblite.kgf.Api2.SharedPrefManager.setString("PHONE_NUMBER", mobile)
                         loginState.value = Resource.Success(it)
                     } ?: run {
                         loginState.value = Resource.Error("Empty response")

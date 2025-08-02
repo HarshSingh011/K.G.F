@@ -49,28 +49,26 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavHostController
+import com.weblite.kgf.navigation.AppNavGraph
 import com.weblite.kgf.Api2.MainViewModel
 import com.weblite.kgf.Api2.Resource
 import com.weblite.kgf.Api2.SharedPrefManager
 import com.weblite.kgf.R
 import com.weblite.kgf.data.EarningUser
 import com.weblite.kgf.data.Winner
-import com.weblite.kgf.ui.components.AVIATOR
+import com.weblite.kgf.navigation.AppRoutes
+import com.weblite.kgf.navigation.navigateToWingo30
+import com.weblite.kgf.navigation.navigateToWingo60
+import com.weblite.kgf.navigation.navigateToK3_30
+import com.weblite.kgf.navigation.navigateToK3_60
+import com.weblite.kgf.navigation.navigateToDragonTiger
+import com.weblite.kgf.navigation.navigateToAviator
 import com.weblite.kgf.ui.components.AttractiveText
 import com.weblite.kgf.ui.components.CardSection
-import com.weblite.kgf.ui.components.DRAGON_TIGER
 import com.weblite.kgf.ui.components.EarningInfoSection
 import com.weblite.kgf.ui.components.EarningsChart
-import com.weblite.kgf.ui.components.HOMESCREEN
-import com.weblite.kgf.ui.components.K3_30
-import com.weblite.kgf.ui.components.K3_60
 import com.weblite.kgf.ui.components.UserWalletCards
-import com.weblite.kgf.ui.components.WINGO_30
-import com.weblite.kgf.ui.components.WINGO_60
 import com.weblite.kgf.ui.components.WinningInfoSection
 import com.weblite.kgf.ui.screens.game.screens.K3Ui30
 import com.weblite.kgf.ui.screens.game.screens.K3Ui60
@@ -85,120 +83,29 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
-    navController: NavController,
+    navController: NavHostController,
     onShowTopBar: (Boolean) -> Unit,
     onShowBottomBar: (Boolean) -> Unit,
     onNavigateToWallet: () -> Unit,
     onNavigateToProfile: () -> Unit,
-    timerService: WingoTimerService = hiltViewModel<MainViewModel>().timerService
 ) {
 
-    val context = LocalContext.current
-    val localNavController = rememberNavController()
-
-    NavHost(
-        navController = localNavController,
-        startDestination = HOMESCREEN
-    ) {
-        composable(HOMESCREEN) {
-            LaunchedEffect(Unit) {
-                onShowTopBar(true)
-                onShowBottomBar(true)
-            }
-
-            HomeMainConten(
-                navController = localNavController,
-                onNavigateToWallet = onNavigateToWallet,
-                onNavigateToProfile = onNavigateToProfile,
-                timerService = timerService
-            )
-        }
-
-        composable(WINGO_30) {
-            // Call countdown APIs when navigating to Wingo30
-//            LaunchedEffect(Unit) {
-//                timerService.fetchInitialData()
-//            }
-
-            Wingo30Screen(
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = { onShowTopBar(it) },
-                onShowBottomBar = { onShowBottomBar(it) }
-            )
-        }
-
-        composable(WINGO_60) {
-            // Call countdown APIs when navigating to Wingo60
-//            LaunchedEffect(Unit) {
-//                timerService.fetchInitialData()
-//            }
-
-            Wingo60Screen(
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = { onShowTopBar(it) },
-                onShowBottomBar = { onShowBottomBar(it) }
-            )
-        }
-
-        composable(K3_30) {
-//            LaunchedEffect(Unit) {
-//                Toast.makeText(context, "K3 30 opened", Toast.LENGTH_SHORT).show()
-//                // Call countdown APIs when navigating to K3_30
-//                timerService.fetchInitialData()
-//            }
-            K3Ui30(
-                variant = "30",
-                onBack = { localNavController.popBackStack() },
-                onShowTopBar = { onShowTopBar(it) },
-                onShowBottomBar = { onShowBottomBar(it) }
-            )
-        }
-
-        composable(K3_60) {
-//            LaunchedEffect(Unit) {
-//                Toast.makeText(context, "K3 60 opened", Toast.LENGTH_SHORT).show()
-//                // Call countdown APIs when navigating to K3_60
-//                timerService.fetchInitialData()
-//            }
-            K3Ui60(
-                variant = "60",
-                onBack = { navController.popBackStack() },
-                onShowTopBar = { onShowTopBar(it) },
-                onShowBottomBar = { onShowBottomBar(it) }
-            )
-        }
-
-        composable(DRAGON_TIGER) {
-//            LaunchedEffect(Unit) {
-//                // Call countdown APIs when navigating to Dragon Tiger
-//                timerService.fetchInitialData()
-//            }
-
-            TigerAndDragonGameScreen(
-                onShowTopBar = { onShowTopBar(it) },
-                onShowBottomBar = { onShowBottomBar(it) },
-                onBackClick = { localNavController.popBackStack() } // Pass the back navigation action
-            )
-        }
-
-        composable(AVIATOR) {
-//            LaunchedEffect(Unit) {
-//                Toast.makeText(context, "Aviator opened", Toast.LENGTH_SHORT).show()
-//                // Call countdown APIs when navigating to Aviator
-//                timerService.fetchInitialData()
-//            }
-        }
-    }
+    AppNavGraph(
+        navController = navController,
+        onShowTopBar = onShowTopBar,
+        onShowBottomBar = onShowBottomBar,
+        onNavigateToWallet = onNavigateToWallet,
+        onNavigateToProfile = onNavigateToProfile
+    )
 }
 
 @Composable
 fun HomeMainConten(
-    navController: NavController,
+    navController: NavHostController,
     onNavigateToWallet: () -> Unit,
     onNavigateToProfile: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MainViewModel = hiltViewModel(),
-    timerService: WingoTimerService
 ){
 
     val dashboardState = viewModel.dashboardState.value
@@ -287,8 +194,8 @@ fun HomeMainConten(
             items = WingoItems,
             onItemClick = { imagePath ->
                 when (imagePath) {
-                    "gameimg/Wingo_30.jpeg" -> navController.navigate(WINGO_30)
-                    "gameimg/Wingo_60.jpg" -> navController.navigate(WINGO_60)
+                    "gameimg/Wingo_30.jpeg" -> navigateToWingo30(navController)
+                    "gameimg/Wingo_60.jpg" -> navigateToWingo60(navController)
                 }
             }
         )
@@ -297,8 +204,8 @@ fun HomeMainConten(
             items = K3Items,
             onItemClick = { imagePath ->
                 when (imagePath) {
-                    "gameimg/K3_30.jpg" -> navController.navigate(K3_30)
-                    "gameimg/K3_60.jpg" -> navController.navigate(K3_60)
+                    "gameimg/K3_30.jpg" -> navigateToK3_30(navController)
+                    "gameimg/K3_60.jpg" -> navigateToK3_60(navController)
                 }
             }
         )
@@ -307,8 +214,8 @@ fun HomeMainConten(
             items = DragAviItems,
             onItemClick = { imagePath ->
                 when (imagePath) {
-                    "gameimg/Dragon_tiger.jpeg" -> navController.navigate(DRAGON_TIGER)
-                    "gameimg/Aviator_img.png" -> navController.navigate(AVIATOR)
+                    "gameimg/Dragon_tiger.jpeg" -> navigateToDragonTiger(navController)
+                    "gameimg/Aviator_img.png" -> navigateToAviator(navController)
                 }
             }
         )
@@ -324,14 +231,7 @@ fun HomeMainConten(
     }
 }
 
-fun navigateToGame(navController: NavController, gameName: String) {
-    when (gameName.lowercase()) {
-        "k3" -> navController.navigate("k3_screen")
-        "Wingo 30" -> navController.navigate("wingo_screen")
-        "dragon_tiger" -> navController.navigate("dragon_tiger_screen")
-        "aviator" -> navController.navigate("aviator_screen")
-    }
-}
+
 
 @Composable
 fun BannerSection(bannerImages: List<String>) {

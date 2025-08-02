@@ -4,6 +4,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -12,156 +14,214 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
+import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import android.util.Log
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.weblite.kgf.R
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.weblite.kgf.ui.screens.payScreens.DepositApiViewModel
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Divider
 
 @Composable
-fun PaymentDepositDialog(
+fun PaymentDepositScreen(
     amount: String = "₹ 100.00",
-    onDismiss: () -> Unit = {},
-    showNoUpi: Boolean = true
+    onBackClick: () -> Unit = {},
+    showNoUpi: Boolean = true,
+    qrViewModel: QrCodeViewModel = hiltViewModel(),
+    depositViewModel: DepositApiViewModel = hiltViewModel()
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {},
-        containerColor = Color.Transparent,
-        shape = RectangleShape,
-        title = null,
-        text = {
+    val qrImageUrl by qrViewModel.qrImageUrl.collectAsState()
+    var utrNumber by remember { mutableStateOf("") }
+    val utrValid = utrNumber.length == 12 && utrNumber.all { it.isDigit() }
+    val loading by depositViewModel.loading.collectAsState()
+    val error by depositViewModel.error.collectAsState()
+    val depositResponse by depositViewModel.depositResponse.collectAsState()
+    LaunchedEffect(Unit) {
+        qrViewModel.fetchQrCode()
+    }
+    val scrollState = rememberScrollState()
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF5F5F5))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Top Bar
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF007BFF))
+                    .padding(horizontal = 8.dp, vertical = 12.dp)
+            ) {
+                Button(
+                    onClick = onBackClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Text("←", fontSize = 22.sp, color = Color.White)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "Payment",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp,
+                    color = Color.White,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(36.dp))
+            }
+            // Amount Payable
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.Transparent)
+                    .padding(vertical = 16.dp)
+                    .shadow(8.dp, shape = RectangleShape)
+                    .background(Color.White, shape = RectangleShape),
+                contentAlignment = Alignment.Center
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(0.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(vertical = 16.dp)
                 ) {
-                    // Card with shadow and square corners
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 0.dp, vertical = 0.dp)
-                            .shadow(16.dp, shape = RectangleShape)
-                            .background(Color.White, shape = RectangleShape)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                        ) {
-                            // Top Bar with square corners
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(Color(0xFF007BFF))
-                                    .padding(horizontal = 8.dp, vertical = 12.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Button(
-                                        onClick = onDismiss,
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                                        contentPadding = PaddingValues(0.dp),
-                                        modifier = Modifier.size(36.dp)
-                                    ) {
-                                        Text("←", fontSize = 22.sp, color = Color.White)
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        "Payment",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 22.sp,
-                                        color = Color.White,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    Spacer(modifier = Modifier.width(36.dp)) // For symmetry
-                                }
-                            }
-
-                            // Amount Payable Card with square corners and shadow, overlapping top bar
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                                    .offset(y = (-15).dp)
-                                    .shadow(8.dp, shape = RectangleShape)
-                                    .background(Color.White, shape = RectangleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center,
-                                    modifier = Modifier.padding(vertical = 16.dp)
-                                ) {
-                                    Text(
-                                        text = "Amount Payable  ",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 18.sp,
-                                        color = Color.Black
-                                    )
-                                    Text(
-                                        text = amount,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 20.sp,
-                                        color = Color(0xFF007BFF)
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            // Payment Methods
-                            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                PaymentMethodCard(R.drawable.paytm, "Paytm")
-                                Spacer(modifier = Modifier.height(14.dp))
-                                PaymentMethodCard(R.drawable.phonepe, "PhonePe")
-                                Spacer(modifier = Modifier.height(14.dp))
-                                PaymentMethodCard(R.drawable.gpay, "G Pay")
-                                Spacer(modifier = Modifier.height(14.dp))
-                                PaymentMethodCard(R.drawable.upi, "UPI")
-                            }
-
-                            if (showNoUpi) {
-                                Spacer(modifier = Modifier.height(24.dp))
-                                Text(
-                                    "No UPI id to show please contact support.",
-                                    color = Color.Red,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp,
-                                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(20.dp))
-                        }
-                    }
+                    Text(
+                        text = "Amount Payable  ",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = amount,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        color = Color(0xFF007BFF)
+                    )
                 }
             }
+            // Payment Methods
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                PaymentMethodCard(R.drawable.paytm, "Paytm")
+                Spacer(modifier = Modifier.height(14.dp))
+                PaymentMethodCard(R.drawable.phonepe, "PhonePe")
+                Spacer(modifier = Modifier.height(14.dp))
+                PaymentMethodCard(R.drawable.gpay, "G Pay")
+                Spacer(modifier = Modifier.height(14.dp))
+                PaymentMethodCard(R.drawable.upi, "UPI")
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            // OR Divider
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Divider(modifier = Modifier.weight(1f), color = Color.Gray)
+                Text("  OR  ", color = Color.Gray, fontWeight = FontWeight.Bold)
+                Divider(modifier = Modifier.weight(1f), color = Color.Gray)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            // QR Image
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .padding(8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!qrImageUrl.isNullOrBlank()) {
+                    var imageError by remember { mutableStateOf<String?>(null) }
+                    AsyncImage(
+                        model = qrImageUrl,
+                        contentDescription = "Deposit QR Code",
+                        modifier = Modifier
+                            .sizeIn(maxWidth = 240.dp, maxHeight = 240.dp)
+                            .fillMaxWidth(0.7f),
+                        onError = { error ->
+                            imageError = error.result.throwable?.localizedMessage ?: "Unknown error"
+                            Log.e("AsyncImage", "Image load error", error.result.throwable)
+                        }
+                    )
+                    if (imageError != null) {
+                        Text(
+                            text = "Failed to load QR image: $imageError",
+                            color = Color.Red,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                } else {
+                    Text("QR code not available", color = Color.Gray)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            // No UPI id warning
+            if (showNoUpi) {
+                Text(
+                    "No UPI id to show please contact support.",
+                    color = Color.Red,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+            // UTR Number input
+            OutlinedTextField(
+                value = utrNumber,
+                onValueChange = { if (it.length <= 12) utrNumber = it.filter { ch -> ch.isDigit() } },
+                label = { Text("Enter 12-digit UTR number") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(0.8f),
+                isError = utrNumber.isNotEmpty() && !utrValid
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            // Submit button
+            Button(
+                onClick = {
+                    val amt = amount.filter { it.isDigit() }.toIntOrNull() ?: 0
+                    depositViewModel.submitDeposit(amt, utrNumber)
+                },
+                enabled = utrValid && !loading,
+                modifier = Modifier.fillMaxWidth(0.8f)
+            ) {
+                if (loading) {
+                    Text("Submitting...", fontWeight = FontWeight.Bold)
+                } else {
+                    Text("Submit", fontWeight = FontWeight.Bold)
+                }
+            }
+            if (error != null) {
+                Text(error ?: "", color = Color.Red, modifier = Modifier.padding(top = 8.dp))
+            }
+            if (depositResponse != null) {
+                Text("Deposit submitted! Status: ${depositResponse?.status}", color = Color.Green, modifier = Modifier.padding(top = 8.dp))
+            }
         }
-    )
+    }
 }
-
-
-data class DepositHistoryItem(
-    val type: String,
-    val status: String,
-    val balance: String,
-    val time: String,
-    val orderNumber: String
-)
 
 
 
@@ -186,43 +246,25 @@ fun PaymentMethodCard(iconRes: Int, label: String) {
     }
 }
 
-@Composable
-fun DepositHistoryRow(item: DepositHistoryItem) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.White, RoundedCornerShape(8.dp))
-            .padding(8.dp)
-            .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(8.dp)),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(item.type, color = Color(0xFF00A651), fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(item.status, color = Color(0xFF00A651), fontWeight = FontWeight.Bold)
-            }
-            Text("Balance: ${item.balance}", color = Color.Black, fontSize = 14.sp)
-            Text("Time: ${item.time}", color = Color.Gray, fontSize = 13.sp)
-            Text("Order number: ${item.orderNumber}", color = Color(0xFF007BFF), fontSize = 13.sp)
-        }
-    }
-}
 
-@Preview(showBackground = true)
 @Composable
-fun PaymentDepositDialogPreview() {
+fun DepositQrImageRow(qrImageUrl: String?) {
     Box(
         modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0x80000000)) // semi-transparent black for dialog overlay
-            .padding(24.dp),
+            .fillMaxWidth()
+            .background(Color.White)
+            .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
-        PaymentDepositDialog(
-            amount = "₹ 100.00",
-            onDismiss = {},
-            showNoUpi = true
-        )
+        if (qrImageUrl != null) {
+            AsyncImage(
+                model = qrImageUrl,
+                contentDescription = "Deposit QR Code",
+                modifier = Modifier
+                    .size(180.dp)
+            )
+        } else {
+            Text("QR code not available", color = Color.Gray)
+        }
     }
 }

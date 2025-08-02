@@ -34,9 +34,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import com.weblite.kgf.Api2.MainViewModel
 import com.weblite.kgf.Api2.Resource
 import com.weblite.kgf.Api2.SharedPrefManager
@@ -84,86 +81,12 @@ fun MainWalletScreen(
     }
 
 
-    val localNavController = rememberNavController()
-    val scrollState = rememberScrollState()
-    val context = LocalContext.current
-    NavHost(
-        navController = localNavController,
-        startDestination = WALLET_MAIN,
+    WalletNavGraph(
+        totalBalance = totalBalance,
+        onShowTopBar = onShowTopBar,
+        onShowBottomBar = onShowBottomBar,
         modifier = modifier
-    ) {
-        composable(WALLET_MAIN) {
-            LaunchedEffect(Unit) {
-                onShowTopBar(true)
-                onShowBottomBar(true)
-            }
-
-            WalletScreen(
-                totalBalance = totalBalance,
-                navController = localNavController,
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = onShowTopBar,
-                onShowBottomBar = onShowBottomBar
-            )
-        }
-
-        composable(ON_DEPOSIT) {
-            LaunchedEffect(Unit) {
-                Toast.makeText(context, "Deposit clicked", Toast.LENGTH_SHORT).show()
-            }
-            DepositScreen(
-                balance = "₹ $totalBalance",
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = onShowTopBar,
-                onShowBottomBar = onShowBottomBar,
-                onHistoryClick = {
-                    localNavController.navigate(ON_DEPO_HIST)
-                }
-            )
-        }
-
-        composable(ON_WITHDRAW) {
-            WithdrawScreen(
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = onShowTopBar,
-                onShowBottomBar = onShowBottomBar,
-                onHistoryClick = {
-                    localNavController.navigate(ON_WITHDR_HIST)
-                }
-            )
-        }
-        composable(ON_DEPO_HIST) {
-            DepositHistory(
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = onShowTopBar,
-                onShowBottomBar = onShowBottomBar
-            )
-        }
-        composable(ON_WITHDR_HIST) {
-            WithdrawHistory(
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = onShowTopBar,
-                onShowBottomBar = onShowBottomBar
-            )
-        }
-
-        // And so on...
-    }
-
-//    Column(
-//        modifier = modifier
-//            .fillMaxSize()
-//            .background(Color(0xFF002051))
-//            .verticalScroll(scrollState) //
-//            .padding(bottom = 16.dp)
-//    ){
-//        WalletScreen(
-//            navController= localNavController,
-//            onBackClick = { localNavController.popBackStack() },
-//            onShowTopBar = { onShowTopBar(it) },
-//            onShowBottomBar = { onShowBottomBar(it) }
-//        )
-//    }
+    )
 }
 
 /////
