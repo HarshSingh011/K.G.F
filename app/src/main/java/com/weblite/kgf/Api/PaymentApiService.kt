@@ -7,6 +7,8 @@ import retrofit2.http.POST
 import com.weblite.kgf.data.model.UpiQrResponse
 import com.weblite.kgf.data.model.DepositRequest
 import com.weblite.kgf.data.model.DepositResponse
+import com.weblite.kgf.data.model.DepositHistoryResponse
+import retrofit2.http.Query
 
 interface PaymentApiService {
     @GET("web/Api/UPI_qrcode")
@@ -14,4 +16,7 @@ interface PaymentApiService {
 
     @POST("web/Api/storeDeposite")
     suspend fun storeDeposit(@Body request: DepositRequest): Response<DepositResponse>
+
+    @GET("web/Api/depositeHistory")
+    suspend fun getDepositHistory(@Query("user_id") userId: String): Response<DepositHistoryResponse>
 }

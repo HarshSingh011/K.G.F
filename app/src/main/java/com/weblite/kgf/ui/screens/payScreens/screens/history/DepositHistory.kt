@@ -45,6 +45,9 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.weblite.kgf.R
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.weblite.kgf.ui.screens.payScreens.history.DepositHistoryViewModel
+import com.weblite.kgf.Api2.SharedPrefManager
 
 @Composable
 fun DepositHistory(
@@ -64,13 +67,13 @@ fun DepositHistory(
     var showData by remember { mutableStateOf(true) }
     var triggerFetch by remember { mutableStateOf(false) }
 
-    data class DepositData(val amount: String, val time: String, val orderNo: String, val method: String, val status: String, val date: String)
+    val viewModel: DepositHistoryViewModel = hiltViewModel()
+    val historyState by viewModel.history.collectAsState()
+    val loading by viewModel.loading.collectAsState()
+    val error by viewModel.error.collectAsState()
 
-    val dummyData = listOf(
-        DepositData("₹500.00", "25 June 2025, 01:18 PM", "RC2025051913185843584303g", "UPI x QR", "to be paid", "2025-06-25"),
-        DepositData("₹200.00", "22 June 2025, 04:55 PM", "RC2025051816551213792306g", "Paytm", "failed", "2025-06-22"),
-        DepositData("₹700.00", "20 June 2025, 03:15 PM", "RC2025051815550099999999a", "UPI x QR", "approved", "2025-06-20")
-    )
+    // Get user_id from SharedPreferences
+    val userId = SharedPrefManager.getString("user_id", "") ?: ""
 
     val datePickerDialog = remember {
         DatePickerDialog(
@@ -88,28 +91,30 @@ fun DepositHistory(
     LaunchedEffect(Unit) {
         onShowTopBar(false)
         onShowBottomBar(false)
+        if (userId.isNotBlank()) {
+            viewModel.fetchDepositHistory(userId)
+        }
     }
 
     LaunchedEffect(triggerFetch) {
-        if (triggerFetch) {
+        if (triggerFetch && userId.isNotBlank()) {
             showData = false
+            viewModel.fetchDepositHistory(userId)
             kotlinx.coroutines.delay(1500)
             showData = true
             triggerFetch = false
         }
     }
 
-    val filteredList = dummyData.filter {
-        (selectedOption == "All" || it.method.equals(selectedOption, ignoreCase = true)) &&
-                (selectedFilter == "All" || it.status.equals(selectedFilter, ignoreCase = true)) &&
-                (selectedDate == "dd-mm-yyyy" || it.date == selectedDate)
-    }
+    // Always show all results from the API, regardless of tab/filter
+    val filteredList = historyState?.result ?: emptyList()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(brush = backgroundColor)
             .padding(16.dp)
+            .verticalScroll(rememberScrollState())
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -230,16 +235,23 @@ fun DepositHistory(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        if (!showData) {
+        if (loading || !showData) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Color.White)
             }
+        } else if (error != null) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(error ?: "Unknown error", color = Color.Red, fontSize = 18.sp)
+            }
         } else {
             if (filteredList.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    filteredList.forEach {
-                        DepositCard(it.amount, it.time, it.orderNo, it.status)
-                    }
+                filteredList.forEach {
+                    DepositCard(
+                        amount = it.total_amount ?: it.pay_amount ?: "-",
+                        time = it.post_date ?: "-",
+                        orderNumber = it.order_no ?: "-",
+                        status = it.step_2 ?: "-"
+                    )
                 }
             } else {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -249,6 +261,7 @@ fun DepositHistory(
         }
     }
 }
+
 
 @Composable
 fun DepositCard(amount: String, time: String, orderNumber: String, status: String) {
