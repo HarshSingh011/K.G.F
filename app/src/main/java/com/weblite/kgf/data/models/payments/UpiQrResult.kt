@@ -1,4 +1,4 @@
-package com.weblite.kgf.data.model
+package com.weblite.kgf.data.models.payments
 
 data class UpiQrResult(
     val id: String,

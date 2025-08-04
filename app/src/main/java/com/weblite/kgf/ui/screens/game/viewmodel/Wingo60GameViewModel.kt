@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.weblite.kgf.Api2.Resource
 import com.weblite.kgf.Api2.SharedPrefManager
-import com.weblite.kgf.data.repository.Wingo60GameRepository
+import com.weblite.kgf.data.repository.GameRespsitories.Wingo60GameRepository
 import com.weblite.kgf.data.models.games.GameHistory60SecResponse
 import com.weblite.kgf.data.models.games.Wingo60SecMyHistoryResponse
 import com.weblite.kgf.data.models.games.BettingGameResultResponse

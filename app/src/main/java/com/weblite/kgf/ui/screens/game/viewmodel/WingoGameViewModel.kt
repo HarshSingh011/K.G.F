@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import dagger.hilt.android.lifecycle.HiltViewModel
-import com.weblite.kgf.Api2.UserRepository
+import com.weblite.kgf.data.repository.AuthRepositories.UserRepository
 import com.weblite.kgf.Api2.Resource
 import com.weblite.kgf.Api2.PeriodIdUIEvent
 import com.weblite.kgf.Api2.SharedPrefManager

@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.weblite.kgf.Api2.Resource
 import com.weblite.kgf.Api2.SharedPrefManager
 import com.weblite.kgf.data.models.games.TigerPeriodIdResponse
-import com.weblite.kgf.data.repository.TigerAndDragonRepository
+import com.weblite.kgf.data.repository.GameRespsitories.TigerAndDragonRepository
 import com.weblite.kgf.data.models.games.TigerGameHistoryResponse
 import com.weblite.kgf.data.models.games.DragonTigerBetRequest
 import com.weblite.kgf.data.models.games.DragonTigerBetResponse

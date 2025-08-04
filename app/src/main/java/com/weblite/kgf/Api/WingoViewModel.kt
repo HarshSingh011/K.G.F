@@ -1,9 +1,9 @@
 package com.weblite.kgf.Api2
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.weblite.kgf.data.PeriodIdResponse
+import com.weblite.kgf.data.repository.AuthRepositories.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow

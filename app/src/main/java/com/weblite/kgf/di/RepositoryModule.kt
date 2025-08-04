@@ -1,7 +1,7 @@
 package com.weblite.kgf.di
 
 import com.weblite.kgf.Api.PaymentApiService
-import com.weblite.kgf.data.repository.UpiQrRepository
+import com.weblite.kgf.data.repository.PaymentRespositories.UpiQrRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

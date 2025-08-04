@@ -2,9 +2,9 @@ package com.weblite.kgf.ui.screens.payScreens
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.weblite.kgf.data.model.DepositRequest
-import com.weblite.kgf.data.model.DepositResponse
-import com.weblite.kgf.data.repository.UpiQrRepository
+import com.weblite.kgf.data.models.payments.DepositRequest
+import com.weblite.kgf.data.models.payments.DepositResponse
+import com.weblite.kgf.data.repository.PaymentRespositories.UpiQrRepository
 import com.weblite.kgf.Api2.SharedPrefManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,16 +27,18 @@ class DepositApiViewModel @Inject constructor(
     val error: StateFlow<String?> = _error.asStateFlow()
 
     fun submitDeposit(amount: Int, utr: String) {
-        // Use the same key as used for saving the phone number in SharedPrefManager
+        val userId = SharedPrefManager.getString("user_id", "") ?: ""
         val mobile = SharedPrefManager.getString("PHONE_NUMBER", "") ?: ""
-        if (mobile.isBlank()) {
-            _error.value = "Mobile number not found in SharedPreferences."
-            return
-        }
         _loading.value = true
         viewModelScope.launch {
             try {
-                val request = DepositRequest(amount = amount, utr_no = utr, mobile = mobile)
+                val request = DepositRequest(
+                    user_id = userId,
+                    pay_amount = amount,
+                    utr_no = utr,
+                    txn_id = "",
+                    mobile = mobile
+                )
                 val response = repository.storeDeposit(request)
                 if (response.isSuccessful) {
                     _depositResponse.value = response.body()

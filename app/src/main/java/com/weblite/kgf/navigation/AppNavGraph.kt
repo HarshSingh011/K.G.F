@@ -13,6 +13,7 @@ import com.weblite.kgf.ui.screens.game.screens.Wingo30Screen
 import com.weblite.kgf.ui.screens.game.screens.Wingo60Screen
 import com.weblite.kgf.ui.screens.dashboard.HomeMainConten
 import com.weblite.kgf.Api2.MainViewModel
+import com.weblite.kgf.ui.screens.payScreens.PaymentDepositScreen
 
 @Composable
 fun AppNavGraph(
@@ -79,7 +80,7 @@ fun AppNavGraph(
         }
         composable("payment_deposit/{amount}") { backStackEntry ->
             val amount = backStackEntry.arguments?.getString("amount") ?: "0"
-            com.weblite.kgf.ui.screens.payScreens.PaymentDepositScreen(
+            PaymentDepositScreen(
                 amount = "₹ $amount",
                 onBackClick = { navController.popBackStack() }
             )

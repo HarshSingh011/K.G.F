@@ -1,4 +1,4 @@
-package com.weblite.kgf.data.repository
+package com.weblite.kgf.data.repository.GameRespsitories
 
 import com.weblite.kgf.Api2.ApiService
 import com.weblite.kgf.data.GameBetK360

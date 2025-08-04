@@ -3,7 +3,7 @@ package com.weblite.kgf.ui.screens.payScreens
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.weblite.kgf.data.repository.UpiQrRepository
+import com.weblite.kgf.data.repository.PaymentRespositories.UpiQrRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow

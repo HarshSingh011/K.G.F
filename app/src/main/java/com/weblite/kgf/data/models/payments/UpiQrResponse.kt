@@ -1,4 +1,5 @@
-package com.weblite.kgf.data.model
+package com.weblite.kgf.data.models.payments
+
 
 data class UpiQrResponse(
     val status: String,

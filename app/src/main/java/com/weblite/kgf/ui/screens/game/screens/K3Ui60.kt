@@ -169,7 +169,6 @@ fun K3Ui60(
             myHistoryPagination = myHistoryPagination.copy(totalPages = totalPages, currentPage = 1)
         }
     }
-    // ...existing code...
 
     var displayedDice by remember { mutableStateOf(listOf(1, 1, 1)) }
     var lastTimeRemainingForDice by remember { mutableStateOf(timeRemaining) }

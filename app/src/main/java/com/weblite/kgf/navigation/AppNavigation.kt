@@ -39,7 +39,3 @@ fun navigateToDragonTiger(navController: NavController) {
 fun navigateToAviator(navController: NavController) {
     navController.navigate(AppRoutes.AVIATOR)
 }
-
-fun navigateToPaymentDeposit(navController: NavController) {
-    navController.navigate(AppRoutes.PAYMENT_DEPOSIT)
-}

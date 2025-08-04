@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.weblite.kgf.Api2.Resource
 import com.weblite.kgf.Api2.SharedPrefManager
 import com.weblite.kgf.data.K360GameHistoryItem
-import com.weblite.kgf.data.repository.K360GameRepository
+import com.weblite.kgf.data.repository.GameRespsitories.K360GameRepository
 import com.weblite.kgf.data.K360MyHistoryItem
 import com.weblite.kgf.data.models.games.K3PopupHistoryResponse
 import dagger.hilt.android.lifecycle.HiltViewModel

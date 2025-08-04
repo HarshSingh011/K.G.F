@@ -4,10 +4,10 @@ import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Body
 import retrofit2.http.POST
-import com.weblite.kgf.data.model.UpiQrResponse
-import com.weblite.kgf.data.model.DepositRequest
-import com.weblite.kgf.data.model.DepositResponse
-import com.weblite.kgf.data.model.DepositHistoryResponse
+import com.weblite.kgf.data.models.payments.DepositRequest
+import com.weblite.kgf.data.models.payments.DepositResponse
+import com.weblite.kgf.data.models.payments.DepositHistoryResponse
+import com.weblite.kgf.data.models.payments.UpiQrResponse
 import retrofit2.http.Query
 
 interface PaymentApiService {

@@ -1,10 +1,6 @@
 package com.weblite.kgf.utils
 
 object DiceUtils {
-    /**
-     * Given a bidNum (3..18), returns a list of three dice values (each 1..6) that sum to bidNum.
-     * The distribution is as even as possible, e.g. 4 -> [2,1,1], 5 -> [3,1,1], 6 -> [2,2,2], etc.
-     */
     fun getDiceValues(bidNum: Int): List<Int> {
         if (bidNum < 3 || bidNum > 18) return listOf(1, 1, 1)
         val base = bidNum / 3
@@ -17,10 +13,6 @@ object DiceUtils {
         }.sortedDescending()
     }
 
-    /**
-     * Given a dice value (1..6), returns the drawable resource id for that dice face.
-     * Usage: getDiceDrawable(3) -> R.drawable.dice_3
-     */
     fun getDiceDrawable(diceValue: Int): Int {
         return when (diceValue) {
             1 -> com.weblite.kgf.R.drawable.dice_1

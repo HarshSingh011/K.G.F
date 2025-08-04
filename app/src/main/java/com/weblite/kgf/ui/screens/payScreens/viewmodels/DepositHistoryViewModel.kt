@@ -2,8 +2,8 @@ package com.weblite.kgf.ui.screens.payScreens.history
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.weblite.kgf.data.model.DepositHistoryResponse
-import com.weblite.kgf.data.repository.UpiQrRepository
+import com.weblite.kgf.data.models.payments.DepositHistoryResponse
+import com.weblite.kgf.data.repository.PaymentRespositories.UpiQrRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

@@ -56,6 +56,14 @@ fun PaymentDepositScreen(
     val loading by depositViewModel.loading.collectAsState()
     val error by depositViewModel.error.collectAsState()
     val depositResponse by depositViewModel.depositResponse.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // Show success and navigate back if deposit is successful
+    LaunchedEffect(depositResponse) {
+        if (depositResponse?.status == "success") {
+            android.widget.Toast.makeText(context, "Deposit successful!", android.widget.Toast.LENGTH_SHORT).show()
+            onBackClick()
+        }
+    }
     LaunchedEffect(Unit) {
         qrViewModel.fetchQrCode()
     }
@@ -216,7 +224,7 @@ fun PaymentDepositScreen(
             if (error != null) {
                 Text(error ?: "", color = Color.Red, modifier = Modifier.padding(top = 8.dp))
             }
-            if (depositResponse != null) {
+            if (depositResponse != null && depositResponse?.status != "success") {
                 Text("Deposit submitted! Status: ${depositResponse?.status}", color = Color.Green, modifier = Modifier.padding(top = 8.dp))
             }
         }
