@@ -11,6 +11,8 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 
 interface TigerAndDragonApiService {
+    @GET("web/Api/dragontigerWinResult")
+    suspend fun getDragonTigerWinResult(): com.weblite.kgf.data.models.games.DragonTigerWinResultResponse
 
     @GET("web/Api/dragonTigerPeriodID")
     suspend fun getTigerPeriodId(@Query("user_id") userId: String): TigerPeriodIdResponse

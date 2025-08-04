@@ -14,6 +14,15 @@ class TigerAndDragonRepository @Inject constructor(
     private val apiService: TigerAndDragonApiService
 ) {
 
+    suspend fun fetchDragonTigerWinResult(): Result<com.weblite.kgf.data.models.games.DragonTigerWinResultResponse> {
+        return try {
+            val response = apiService.getDragonTigerWinResult()
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun fetchTigerPeriodId(userId: String?): Result<TigerPeriodIdResponse> {
         return try {
             val response = apiService.getTigerPeriodId(userId ?: "")

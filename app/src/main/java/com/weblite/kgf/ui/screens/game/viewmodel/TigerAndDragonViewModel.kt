@@ -27,6 +27,25 @@ class TigerAndDragonViewModel @Inject constructor(
     private val repository: TigerAndDragonRepository
 ) : ViewModel() {
 
+    // --- Win Result State ---
+    private val _winResult = MutableStateFlow<String?>(null)
+    val winResult: StateFlow<String?> = _winResult
+
+    fun fetchWinResult() {
+        viewModelScope.launch {
+            val result = repository.fetchDragonTigerWinResult()
+            result.fold(
+                onSuccess = { response ->
+                    val win = response.result?.result
+                    _winResult.value = win
+                },
+                onFailure = {
+                    _winResult.value = null
+                }
+            )
+        }
+    }
+
     private val _periodId = MutableSharedFlow<Resource<TigerPeriodIdResponse>>()
     val periodId: SharedFlow<Resource<TigerPeriodIdResponse>> = _periodId
 
@@ -85,7 +104,9 @@ class TigerAndDragonViewModel @Inject constructor(
         // 2. Refresh game history and my history
         fetchGameHistory()
         fetchMyHistory()
-        // 3. Clear coins in UI (UI should observe timerEnded)
+        // 3. Fetch win result after timer ends
+        fetchWinResult()
+        // 4. Clear coins in UI (UI should observe timerEnded)
         // Reset timerEnded after short delay so UI can react
         viewModelScope.launch {
             kotlinx.coroutines.delay(500)
@@ -109,6 +130,8 @@ class TigerAndDragonViewModel @Inject constructor(
                         _periodId.emit(Resource.Success(periodResponse.copy()))
                         _currentPeriodValue = periodResponse.result.firstOrNull()?.periodId
                         Log.d("TigerAndDragonVM", "Period ID fetched successfully: ${periodResponse.result.firstOrNull()?.periodId}")
+                        // Fetch win result after periodId is fetched
+                        fetchWinResult()
                         if (syncTimer && periodResponse.result.isNotEmpty()) {
                             val period = periodResponse.result[0]
                             val serverTime = try {
@@ -161,8 +184,8 @@ class TigerAndDragonViewModel @Inject constructor(
     val gameHistory: StateFlow<TigerGameHistoryResponse?> = _gameHistory
 
     // --- My History State ---
-    private val _myHistory = MutableStateFlow<MyHistoryApiResponse?>(null)
-    val myHistory: StateFlow<MyHistoryApiResponse?> = _myHistory
+    private val _myHistory = MutableStateFlow<Resource<MyHistoryApiResponse>>(Resource.Loading())
+    val myHistory: StateFlow<Resource<MyHistoryApiResponse>> = _myHistory
 
     private var gameHistoryPollingJob: Job? = null
 
@@ -204,6 +227,7 @@ class TigerAndDragonViewModel @Inject constructor(
     // --- Fetch My History ---
     fun fetchMyHistory() {
         viewModelScope.launch {
+            _myHistory.value = Resource.Loading()
             try {
                 val result = repository.fetchMyHistory(userId)
                 result.fold(
@@ -219,7 +243,7 @@ class TigerAndDragonViewModel @Inject constructor(
                             result = response.result?.copy(history = historyList)
                         )
 
-                        _myHistory.value = safeResponse
+                        _myHistory.value = Resource.Success(safeResponse)
                         Log.d("TigerAndDragonVM", "My history fetched successfully. History count: ${historyList.size}")
 
                         // Debug: Log first few items
@@ -228,12 +252,12 @@ class TigerAndDragonViewModel @Inject constructor(
                         }
                     },
                     onFailure = { error ->
-                        _myHistory.value = null
+                        _myHistory.value = Resource.Error(error.message ?: "Unknown error")
                         Log.e("TigerAndDragonVM", "Error fetching my history: ${error.message}", error)
                     }
                 )
             } catch (e: Exception) {
-                _myHistory.value = null
+                _myHistory.value = Resource.Error(e.message ?: "Unknown error")
                 Log.e("TigerAndDragonVM", "Exception fetching my history: ${e.message}", e)
             }
         }

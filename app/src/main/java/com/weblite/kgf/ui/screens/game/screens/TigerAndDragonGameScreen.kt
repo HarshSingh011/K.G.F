@@ -36,6 +36,7 @@ import com.weblite.kgf.ui.screens.game.viewmodel.TigerAndDragonViewModel
 import com.weblite.kgf.data.models.games.TigerGameHistoryResponse
 import com.weblite.kgf.Api2.Resource
 import com.weblite.kgf.PreviewInterface.ITigerAndDragonViewModel
+import com.weblite.kgf.data.models.games.MyHistoryApiResponse
 import com.weblite.kgf.data.models.games.TigerGameHistoryResult
 import com.weblite.kgf.data.models.games.TigerPeriodIdResponse
 import com.weblite.kgf.ui.components.GameHistoryDialogTigerAndDragon
@@ -75,7 +76,7 @@ fun TigerAndDragonGameScreen(
     var tieCoins by remember { mutableStateOf(listOf<Int>()) }
 
     // State for my history
-    val myHistoryState by viewModel.myHistory.collectAsState(initial = null)
+    val myHistoryState by viewModel.myHistory.collectAsState()
 
     // Track all coins placed (even those not visible)
     var dragonAllCoins by remember { mutableStateOf(listOf<Int>()) }
@@ -195,71 +196,18 @@ fun TigerAndDragonGameScreen(
 
 
     val timerEnded by viewModel.timerEnded.collectAsState()
-    var resultOverlayType by remember { mutableStateOf<String?>(null) } // "dragon", "tiger", "draw", or null
-    // Track last periodId for which overlay was shown
+    val winResult by viewModel.winResult.collectAsState()
+    var showWinDialog by remember { mutableStateOf(false) }
     var lastShownPeriodId by remember { mutableStateOf<String?>(null) }
 
-    // Show result overlay only when periodId changes after timer ends
-    LaunchedEffect(timerEnded) {
-        if (timerEnded && showPeriodId != null && showPeriodId != lastShownPeriodId) {
-            dragonCoins = emptyList(); tigerCoins = emptyList(); tieCoins = emptyList();
-            dragonAllCoins = emptyList(); tigerAllCoins = emptyList(); tieAllCoins = emptyList();
+    // Show WinDialog when winResult updates after timer ends and periodId changes
+    LaunchedEffect(timerEnded, winResult) {
+        if (timerEnded && showPeriodId != null && showPeriodId != lastShownPeriodId && winResult != null) {
+            dragonCoins = emptyList(); tigerCoins = emptyList(); tieCoins = emptyList()
+            dragonAllCoins = emptyList(); tigerAllCoins = emptyList(); tieAllCoins = emptyList()
             selectedChipIndex = -1
-            // Fetch game history for new period
-            Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] New periodId detected ($showPeriodId), fetching game history and waiting for update.")
-            var tries = 0
-            var historyList: List<Any>? = null
-            var periodValue: String? = null
-            while (tries < 10) { // Try for up to ~1 second (10 x 100ms)
-                viewModel.fetchGameHistory()
-                kotlinx.coroutines.delay(100)
-                historyList = gameHistoryState?.result?.history
-                if (!historyList.isNullOrEmpty()) {
-                    val periodField = try { historyList?.get(1)?.javaClass?.getDeclaredField("period") } catch (e: Exception) { null }
-                    periodValue = periodField?.let { it.isAccessible = true; it.get(historyList?.get(1))?.toString() }
-                    if (periodValue == showPeriodId) break
-                }
-                tries++
-            }
-            Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] History list (from ViewModel): $historyList")
-            Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] History list size: ${historyList?.size}")
-            val periodField = if (!historyList.isNullOrEmpty()) try { historyList?.get(1)?.javaClass?.getDeclaredField("period") } catch (e: Exception) { null } else null
-            periodValue = periodField?.let { it.isAccessible = true; it.get(historyList?.get(1))?.toString() }
-            if (historyList.isNullOrEmpty() || periodValue != showPeriodId) {
-                Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] No valid history for this period! Refetching data and showing 'no_result' overlay.")
-                viewModel.fetchGameHistory() // Try one more time to fetch
-                resultOverlayType = "no_result"
-                lastShownPeriodId = showPeriodId
-                return@LaunchedEffect
-            }
-            historyList?.forEachIndexed { idx, item ->
-                val res = try { item.javaClass.getDeclaredField("result").let { it.isAccessible = true; it.get(item)?.toString() } } catch (e: Exception) { null }
-                Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] history[$idx].result = $res")
-            }
-            // Always use the 0th index for result
-            val resultValue = try { historyList?.get(1)?.javaClass?.getDeclaredField("result")?.let { it.isAccessible = true; it.get(historyList?.get(1))?.toString()?.trim()?.lowercase() } } catch (e: Exception) { null }
-            Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] Used result value for overlay: $resultValue")
-            if (resultValue.isNullOrEmpty() || resultValue == "running") {
-                Log.d("TigerAndDragonGameScreen", "[OVERLAY LOGIC] No valid result found in history list! Showing 'no_result' overlay.")
-                resultOverlayType = "no_result"
-                lastShownPeriodId = showPeriodId
-                return@LaunchedEffect
-            }
-            when (resultValue) {
-                "tiger" -> resultOverlayType = "tiger"
-                "dragon" -> resultOverlayType = "dragon"
-                "draw", "tie" -> resultOverlayType = "draw"
-                else -> resultOverlayType = "no_result"
-            }
+            showWinDialog = true
             lastShownPeriodId = showPeriodId
-        }
-    }
-
-    // Hide overlay automatically after 300ms whenever it is shown
-    LaunchedEffect(resultOverlayType) {
-        if (resultOverlayType != null) {
-            delay(500)
-            resultOverlayType = null
         }
     }
 
@@ -369,55 +317,7 @@ fun TigerAndDragonGameScreen(
                 }
             }
 
-            // My History UI (simple mapping)
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp)
-                    .align(Alignment.TopCenter)
-                    .zIndex(5f),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("My History", color = Color.White, fontSize = 18.sp)
-                when (myHistoryState) {
-                    is Resource.Success<*> -> {
-                        val data = (myHistoryState as Resource.Success<*>).data
-                        val historyList = when (data) {
-                            is TigerGameHistoryResult -> data.history
-                            is TigerGameHistoryResponse -> data.result?.history
-                            else -> null
-                        }
-                        if (historyList != null && historyList.isNotEmpty()) {
-                            historyList.take(5).forEach { item ->
-                                val amount = try {
-                                    item.javaClass.getDeclaredField("amount").let { field ->
-                                        field.isAccessible = true
-                                        field.get(item)?.toString()
-                                    }
-                                } catch (e: Exception) {
-                                    null
-                                }
-                                Text(
-                                    text = "${item.result} | ₹${amount ?: "N/A"}",
-                                    color = Color.White,
-                                    fontSize = 14.sp
-                                )
-                            }
-                        } else {
-                            Text("No history found", color = Color.Gray, fontSize = 14.sp)
-                        }
-                    }
-                    is Resource.Error<*> -> {
-                        Text("Error loading history", color = Color.Red, fontSize = 14.sp)
-                    }
-                    is Resource.Loading<*> -> {
-                        Text("Loading history...", color = Color.Gray, fontSize = 14.sp)
-                    }
-                    else -> {
-                        Text("No history", color = Color.Gray, fontSize = 14.sp)
-                    }
-                }
-            }
+    // ...removed My History UI from main screen, now only in dialog...
             val overlayHeight = maxHeight * 0.75f
             val overlayWidth = maxWidth * 0.18f
 
@@ -1107,38 +1007,43 @@ fun TigerAndDragonGameScreen(
             }
         }
 
-        // Result overlay after timer ends (400ms)
-        if (resultOverlayType != null) {
-            Box(
+        // WinDialog after timer ends, using API result
+        if (showWinDialog) {
+            androidx.compose.material3.Surface(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color(0xAA000000))
                     .zIndex(10f),
-                contentAlignment = Alignment.Center
+                color = Color.Transparent
             ) {
-                when (resultOverlayType) {
-                    "dragon" -> Image(
-                        painter = painterResource(R.drawable.dragon),
-                        contentDescription = "Dragon Overlay",
-                        modifier = Modifier.size(220.dp)
-                    )
-                    "tiger" -> Image(
-                        painter = painterResource(R.drawable.tiger),
-                        contentDescription = "Tiger Overlay",
-                        modifier = Modifier.size(220.dp)
-                    )
-                    "draw" -> Text(
-                        text = "Draw",
-                        color = Color.White,
-                        fontSize = 64.sp,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                    "no_result" -> Text(
-                        text = "No Result",
-                        color = Color.Gray,
-                        fontSize = 48.sp,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    when (winResult?.lowercase()) {
+                        "dragon" -> Image(
+                            painter = painterResource(R.drawable.dragon),
+                            contentDescription = "Dragon Wins",
+                            modifier = Modifier.size(180.dp)
+                        )
+                        "tiger" -> Image(
+                            painter = painterResource(R.drawable.tiger),
+                            contentDescription = "Tiger Wins",
+                            modifier = Modifier.size(180.dp)
+                        )
+                        "draw", "tie" -> Text(
+                            text = "It's a Draw!",
+                            color = Color.White,
+                            fontSize = 38.sp
+                        )
+                        else -> Text(
+                            text = "No Result",
+                            color = Color.White,
+                            fontSize = 32.sp
+                        )
+                    }
+                    // Dismiss after 1s
+                    LaunchedEffect(winResult) {
+                        delay(1000)
+                        showWinDialog = false
+                    }
                 }
             }
         }
@@ -1219,14 +1124,4 @@ class PreviewTigerAndDragonViewModel : ITigerAndDragonViewModel {
     override fun placeBet(type: String, amount: Int) {}
 }
 
-//@Preview(showBackground = true, widthDp = 800, heightDp = 480)
-//@Composable
-//fun TigerAndDragonGameScreenPreview() {
-//    val mockViewModel = PreviewTigerAndDragonViewModel()
-//    TigerAndDragonGameScreen(
-//        onShowTopBar = {},
-//        onShowBottomBar = {},
-//        onBackClick = {},
-//        viewModel = mockViewModel
-//    )
-//}
+
