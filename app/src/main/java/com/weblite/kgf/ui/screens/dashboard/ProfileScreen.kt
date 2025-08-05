@@ -85,6 +85,7 @@ import com.weblite.kgf.ui.components.ON_WITHDR_HIST
 import com.weblite.kgf.ui.components.PROFILE_MAIN_ROUTE
 import com.weblite.kgf.ui.components.WALLET_ROUTE
 import com.weblite.kgf.ui.screens.internalScreens.VipScreen
+import com.weblite.kgf.ui.screens.internalScreens.Service24O7Screen
 import com.weblite.kgf.ui.screens.payScreens.DepositHistory
 import com.weblite.kgf.ui.screens.payScreens.TransactionHistory
 import com.weblite.kgf.ui.screens.payScreens.WithdrawHistory
@@ -95,6 +96,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.weblite.kgf.Api2.MainViewModel
 import com.weblite.kgf.Api2.Resource
 import com.weblite.kgf.Api2.SharedPrefManager
+import com.weblite.kgf.ui.navigation.ProfileNavHost
+import com.weblite.kgf.ui.navigation.SERVICE_24_7_ROUTE
 import com.weblite.kgf.ui.screens.payScreens.WithdrawScreen
 
 data class HistoryItem(
@@ -112,107 +115,22 @@ fun ProfileScreen(
     onShowBottomBar: (Boolean) -> Unit,
     onNavigateToWallet: () -> Unit
 ) {
-
+    // Use a local NavController for profile navigation
     val localNavController = rememberNavController()
-    val giftHistory = listOf(
-        GiftHistoryItem("COUPON123", "₹50", "2025-06-30", "Success"),
-        GiftHistoryItem("GIFT2025", "₹100", "2025-06-29", "Success"),
-        GiftHistoryItem("COUPON123", "₹50", "2025-06-30", "Success"),
-        GiftHistoryItem("GIFT2025", "₹100", "2025-06-29", "Success"),
-        GiftHistoryItem("COUPON123", "₹50", "2025-06-30", "Success"),
-        GiftHistoryItem("GIFT2025", "₹100", "2025-06-29", "Success"),
-        GiftHistoryItem("COUPON123", "₹50", "2025-06-30", "Success"),
-        GiftHistoryItem("GIFT2025", "₹100", "2025-06-29", "Success")
-
+    ProfileNavHost(
+        navController = localNavController,
+        onShowTopBar = onShowTopBar,
+        onShowBottomBar = onShowBottomBar,
+        onNavigateToWallet = onNavigateToWallet
     )
-    val context = LocalContext.current
-    val window = (context as Activity).window
-
-
-
-    NavHost(navController = localNavController, startDestination = PROFILE_MAIN_ROUTE) {
-        composable(PROFILE_MAIN_ROUTE) {
-            //  Restore bars when returning to profile
-            LaunchedEffect(Unit) {
-                onShowTopBar(true)
-                onShowBottomBar(true)
-            }
-
-            ProfileMainContent(
-                navController = localNavController
-            )
-        }
-        composable(WALLET_ROUTE) {
-            onNavigateToWallet()
-        }
-        composable(ON_DEPOSIT) {
-            DepositScreen(
-                balance = "₹ 17,511,164.75",
-                navController = localNavController,
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = { onShowTopBar(it) },
-                onShowBottomBar = { onShowBottomBar(it) },
-                onHistoryClick = {
-                    localNavController.navigate(ON_DEPO_HIST)
-                }
-            )
-        }
-        composable(ON_WITHDRAW) {
-            WithdrawScreen(
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = onShowTopBar,
-                onShowBottomBar = onShowBottomBar,
-                onHistoryClick = {
-                    localNavController.navigate(ON_WITHDR_HIST)
-                }
-            )
-        }
-        composable(ON_DEPO_HIST) {
-            DepositHistory(
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = onShowTopBar,
-                onShowBottomBar = onShowBottomBar
-            )
-        }
-        composable(ON_WITHDR_HIST) {
-            WithdrawHistory(
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = onShowTopBar,
-                onShowBottomBar = onShowBottomBar
-            )
-        }
-        composable(ON_TRANS_HISTORY) {
-            TransactionHistory(
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = onShowTopBar,
-                onShowBottomBar = onShowBottomBar
-            )
-        }
-        composable(ON_GIFTS) {
-            GiftScreen(
-                onBackClick = { localNavController.popBackStack() },
-                historyList = giftHistory,
-                onApplyCoupon = { code -> println("Applied $code") },
-                onShowTopBar = onShowTopBar,
-                onShowBottomBar = onShowBottomBar
-            )
-        }
-        composable(ON_VIP) {
-            VipScreen(
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = onShowTopBar,
-                onShowBottomBar = onShowBottomBar
-            )
-            WindowCompat.setDecorFitsSystemWindows(window, false)
-
-        }
-    }
+    // Pass localNavController to ProfileMainContent if needed
 }
 
 @Composable
-fun ProfileMainContent(navController: NavController,
-                       modifier: Modifier = Modifier,
-                       viewModel: MainViewModel = hiltViewModel()
+fun ProfileMainContent(
+    navController: NavController,
+    modifier: Modifier = Modifier,
+    viewModel: MainViewModel = hiltViewModel()
 ) {
 
     ////////
@@ -434,11 +352,12 @@ fun ProfileMainContent(navController: NavController,
                 }
             )
 
-            UserDetailsScreen(
-                onSupportClick = { println("Support clicked") },
-                onNotificationClick = { println("Notifications clicked") },
-                onChangePasswordClick = { showChangePasswordDialog = true }
-            )
+    UserDetailsScreen(
+        navController = navController,
+        onSupportClick = { println("Support clicked") },
+        onNotificationClick = { println("Notifications clicked") },
+        onChangePasswordClick = { showChangePasswordDialog = true }
+    )
             LogoutButton { /* act */ }
         }
     }
@@ -828,7 +747,8 @@ fun HistoryGridItem(
 
 @Composable
 fun UserDetailsScreen(
-    onSupportClick: () -> Unit = {},
+    navController: NavController? = null,
+    onSupportClick: (() -> Unit)? = null,
     onNotificationClick: () -> Unit = {},
     onChangePasswordClick: () -> Unit = {}
 ) {
@@ -894,7 +814,9 @@ fun UserDetailsScreen(
         ActionIconText(
             iconRes = R.drawable.support,
             label = "24/7 Customer Support",
-            onClick = onSupportClick
+            onClick = {
+                navController?.navigate(SERVICE_24_7_ROUTE)
+            }
         )
         ActionIconText(
             iconRes = R.drawable.ic_notification,
