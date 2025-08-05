@@ -126,4 +126,11 @@ interface ApiService {
     // K3 30-sec popup history API - using the provided endpoint
     @GET("web/Api/K3WinResultPopup")
     suspend fun getK330PopupHistory(@Query("user_id") userId: String): Response<K3PopupHistoryResponse>
+
+    // Commission date details API
+    @GET("web/Api/myCommissionDateDetails")
+    suspend fun getMyCommissionDateDetails(
+        @Query("user_id") userId: String,
+        @Query("date") date: String
+    ): Response<com.weblite.kgf.domain.model.MyCommissionDateDetailsResponse>
 }

@@ -44,139 +44,99 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.weblite.kgf.Api2.MainViewModel
+import com.weblite.kgf.ui.viewmodel.PromotionViewModel
 import com.weblite.kgf.Api2.Resource
 import com.weblite.kgf.Api2.SharedPrefManager
+import com.weblite.kgf.navigation.COMMISS_DETAILS
+import com.weblite.kgf.navigation.DIRECT_TEAM
+import com.weblite.kgf.navigation.INVITAION_RULES
 import com.weblite.kgf.ui.components.AttractiveText
-import com.weblite.kgf.ui.screens.internalScreens.CommissionDetails
-import com.weblite.kgf.ui.screens.internalScreens.DirectTeamData
-import com.weblite.kgf.ui.screens.internalScreens.InvitationRules
-import com.weblite.kgf.ui.screens.internalScreens.RebateRules
 
-const val PROMOTION_MAIN ="MAIN"
-const val DIRECT_TEAM ="direct team data"
-const val COMMISS_DETAILS ="commission details"
-const val INVITAION_RULES ="invitation rules"
-const val REBATE_RATIO = "rebate ratio"
+import com.weblite.kgf.navigation.PromotionNavHost
+import com.weblite.kgf.navigation.REBATE_RATIO
+
+// Navigation constants moved to PromotionNavHost.kt
 @Composable
 fun PromotionScreen(
     modifier: Modifier = Modifier,
-    navController: NavController,
+    navController: NavHostController,
     onShowTopBar: (Boolean) -> Unit,
     onShowBottomBar: (Boolean) -> Unit
-){
-    val scrollState = rememberScrollState()
-    val context = LocalContext.current
-    val localNavController = rememberNavController()
-
-    NavHost(navController = localNavController, startDestination = PROMOTION_MAIN) {
-        composable(PROMOTION_MAIN) {
-            //  Restore bars when returning to profile
-            LaunchedEffect(Unit) {
-                onShowTopBar(true)
-                onShowBottomBar(true)
-            }
-
-            PromotionMainScreen(
-                navController = localNavController,
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = onShowTopBar,
-                onShowBottomBar = onShowBottomBar
-            )
-        }
-        composable(DIRECT_TEAM) {
-
-            DirectTeamData(
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = { onShowTopBar(it) },
-                onShowBottomBar = { onShowBottomBar(it) }
-            )
-        }
-        composable(COMMISS_DETAILS) {
-            CommissionDetails(
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = { onShowTopBar(it) },
-                onShowBottomBar = { onShowBottomBar(it) }
-            )
-        }
-        composable(INVITAION_RULES) {
-            InvitationRules(
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = { onShowTopBar(it) },
-                onShowBottomBar = { onShowBottomBar(it) }
-            )
-        }
-        composable(REBATE_RATIO) {
-            RebateRules(
-                onBackClick = { localNavController.popBackStack() },
-                onShowTopBar = { onShowTopBar(it) },
-                onShowBottomBar = { onShowBottomBar(it) }
-            )
-        }
-
-    }
-
-
+) {
+    PromotionNavHost(
+        navController = navController,
+        onShowTopBar = onShowTopBar,
+        onShowBottomBar = onShowBottomBar
+    )
 }
 
 @Composable
 fun PromotionMainScreen(
     modifier: Modifier = Modifier,
-    navController: NavController,
+    navController: NavHostController,
     onBackClick: () -> Unit = {},
     onShowTopBar: (Boolean) -> Unit,
     onShowBottomBar: (Boolean) -> Unit,
-    viewModel: MainViewModel = hiltViewModel()
+    viewModel: MainViewModel = hiltViewModel(),
+    promotionViewModel: PromotionViewModel = hiltViewModel()
 ){
-
     val commissionState = viewModel.commissionState.value
-
     val userid = SharedPrefManager.getString("user_id","0")
     LaunchedEffect(key1 = userid) {
         viewModel.fetchCommissions(userid)
     }
-
-    when (commissionState) {
-        is Resource.Loading -> { /* show loading spinner */ }
-        is Resource.Success -> {
-            val commissions = commissionState.data?.commissionData ?: emptyList()
-            // display list
-        }
-        is Resource.Error -> { /* show error message */ }
-        null -> { /* initial state */ }
-    }
     val scrollState = rememberScrollState()
-    if (commissionState is Resource.Success) {
-        val commissions = commissionState.data?.commissionData ?: emptyList()
-
-        // Log each item
-        commissions.forEach { commission ->
-            Log.d("COMMISSION_LOG", "ID: ${commission.id}, Amount: ${commission.amount}, Date: ${commission.date}")
-        }
-
-        // Or log the whole list as JSON (optional)
-        Log.d("COMMISSION_LOG", "All Data: $commissions")
-    }
-
+    // Remove dialog state, navigation will be used
+    val selectedUserId = userid.toString()
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFF002051))
-            .verticalScroll(scrollState) //
+            .verticalScroll(scrollState)
             .padding(bottom = 16.dp)
-    ){
-        AgencyCommissionUI(
-            navController = navController
-        )
-        InvitationDashboardUI(
-            userId = userid.toString(),
-            navController = navController
-        )
+    ) {
+        if (commissionState is Resource.Success) {
+            val commissions = commissionState.data?.commissionData ?: emptyList()
+            Row(
+                Modifier.fillMaxWidth().background(Color(0xFF003366)).padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Sr", color = Color.White, modifier = Modifier.weight(0.5f), textAlign = TextAlign.Center)
+                Text("Amount", color = Color.White, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                Text("Date", color = Color.White, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                Text("Act", color = Color.White, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+            }
+            commissions.forEachIndexed { idx, commission ->
+                Row(
+                    Modifier.fillMaxWidth().background(if (idx % 2 == 0) Color(0xFFeaf6ff) else Color.White).padding(vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("${idx + 1}", modifier = Modifier.weight(0.5f), textAlign = TextAlign.Center)
+                    Text(commission.amount, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                    Text(commission.date, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                    Button(
+                        onClick = {
+                            navController.navigate("commission_details/${commission.date}")
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE8FF00), contentColor = Color.Black),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Details", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+        AgencyCommissionUI(navController = navController)
+        InvitationDashboardUI(userId = userid.toString(), navController = navController)
     }
 }
+
 ////
 
 
@@ -241,6 +201,7 @@ fun AgencyCommissionUI(
         }
         is Resource.Error -> { /* show error */ }
         null -> { /* initial state */ }
+        else -> {}
     }
 
 
@@ -524,7 +485,7 @@ fun AgencyCommissionUI(
 @Composable
 fun InvitationDashboardUI(
     userId: String ="",
-    navController: NavController,
+    navController: NavHostController,
     modifier: Modifier = Modifier
 ) {
     val scaffoldState = rememberScaffoldState()

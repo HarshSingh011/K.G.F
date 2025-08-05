@@ -3,6 +3,7 @@ package com.weblite.kgf.ui.screens.internalScreens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,15 +34,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
+import androidx.navigation.NavController
 
 @Composable
 fun CommissionDetails(
+    navController: NavController,
     onBackClick: () -> Unit = {},
     onShowTopBar: (Boolean) -> Unit,
     onShowBottomBar: (Boolean) -> Unit
 ){
-
+    
     val commissions = listOf(
         Triple("0.0840", "24-May-2025", 1),
         Triple("232.0600", "23-May-2025", 2),
@@ -183,9 +185,13 @@ fun CommissionDetails(
                         Text(amount, color = textclr, fontSize = 14.sp, modifier = Modifier.weight(0.89f))
                         Text(date, color = textclr, fontSize = 14.sp, modifier = Modifier.weight(0.98f))
                         Spacer(modifier = Modifier.width(3.dp))
-                        CommissionDetailButton(Modifier.weight(0.8f))
+                        CommissionDetailButton(
+                            modifier = Modifier.weight(0.8f),
+                            onClick = {
+                                navController.navigate("commission_details/${date}")
+                            }
+                        )
                     }
-
                     Spacer(modifier = Modifier.height(2.dp))
                 }
             }
@@ -194,11 +200,12 @@ fun CommissionDetails(
 }
 
 @Composable
-fun CommissionDetailButton(modifier: Modifier = Modifier) {
+fun CommissionDetailButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(Color(0xFFCEDC00)) // Yellow-Green button
+            .background(Color(0xFFCEDC00))
+            .clickable { onClick() }
             .padding(vertical = 6.dp, horizontal = 12.dp),
         contentAlignment = Alignment.Center
     ) {
