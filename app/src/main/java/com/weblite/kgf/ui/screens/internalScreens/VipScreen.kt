@@ -42,6 +42,15 @@ import kotlin.collections.isNotEmpty
 import kotlin.collections.minByOrNull
 import kotlin.let
 
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.weblite.kgf.presentation.vip.VipViewModel
+import com.weblite.kgf.presentation.vip.VipUiState
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import com.weblite.kgf.ui.screens.internalScreens.VipRewardHistoryScreen
+
 data class VipLevel(
     val level: Int,
     val requiredExp: Long,
@@ -53,15 +62,40 @@ data class VipLevel(
     val gradientColors: List<Color>
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun VipScreen(
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
     onShowTopBar: (Boolean) -> Unit,
     onShowBottomBar: (Boolean) -> Unit
 ) {
-    var selectedVipLevel by remember { mutableIntStateOf(1) }
+    val navController = rememberNavController()
+
+    NavHost(navController = navController, startDestination = "vip_main") {
+        composable("vip_main") {
+            VipMainScreen(
+                onBackClick = onBackClick,
+                onShowTopBar = onShowTopBar,
+                onShowBottomBar = onShowBottomBar,
+                navController = navController
+            )
+        }
+        composable("vip_reward_history") {
+            VipRewardHistoryScreen(onBackClick = { navController.popBackStack() })
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+fun VipMainScreen(
+    modifier: Modifier = Modifier,
+    onBackClick: () -> Unit = {},
+    onShowTopBar: (Boolean) -> Unit,
+    onShowBottomBar: (Boolean) -> Unit,
+    navController: NavController
+) {
     val systemUiController = rememberSystemUiController()
     LaunchedEffect(Unit) {
         onShowTopBar(false)
@@ -74,49 +108,29 @@ fun VipScreen(
         )
     }
 
+    // ViewModel via Hilt
+    val viewModel: VipViewModel = hiltViewModel()
+    val vipState by viewModel.vipState.collectAsState()
+    var selectedVipLevel by remember { mutableIntStateOf(1) }
 
+    // Fetch VIP info on first launch
+    LaunchedEffect(Unit) {
+        viewModel.fetchVipInfo()
+    }
+
+    // Dummy VIP levels for cards (can be improved to use API data if available)
     val vipLevels = remember {
         listOf(
-            VipLevel(
-                1, 3000, 0, true, 60, 30, "Bet ₹1=1EXP",
-                listOf(Color(0xFF6B9BD1), Color(0xFF4A7BA7))
-            ),
-            VipLevel(
-                2, 30000, 0, true, 180, 90, "Bet ₹1=1EXP",
-                listOf(Color(0xFFE67E22), Color(0xFFD35400))
-            ),
-            VipLevel(
-                3, 30000, 0, true, 300, 150, "Bet ₹1=1EXP",
-                listOf(Color(0xFFE74C3C), Color(0xFFC0392B))
-            ),
-            VipLevel(
-                4, 2000000, 0, true, 500, 250, "Bet ₹1=1EXP",
-                listOf(Color(0xFF9B59B6), Color(0xFF8E44AD))
-            ),
-            VipLevel(
-                5, 2000000, 0, true, 800, 400, "Bet ₹1=1EXP",
-                listOf(Color(0xFF1ABC9C), Color(0xFF16A085))
-            ),
-            VipLevel(
-                6, 2000000, 0, true, 1200, 600, "Bet ₹1=1EXP",
-                listOf(Color(0xFFF39C12), Color(0xFFE67E22))
-            ),
-            VipLevel(
-                7, 5000000, 0, true, 2000, 1000, "Bet ₹1=1EXP",
-                listOf(Color(0xFF34495E), Color(0xFF2C3E50))
-            ),
-            VipLevel(
-                8, 10000000, 0, true, 3500, 1750, "Bet ₹1=1EXP",
-                listOf(Color(0xFFE91E63), Color(0xFFC2185B))
-            ),
-            VipLevel(
-                9, 10000000, 0, true, 6000, 3000, "Bet ₹1=1EXP",
-                listOf(Color(0xFF673AB7), Color(0xFF512DA8))
-            ),
-            VipLevel(
-                10, 50000000, 0, true, 10000, 5000, "Bet ₹1=1EXP",
-                listOf(Color(0xFFFFD700), Color(0xFFFFA000))
-            )
+            VipLevel(1, 3000, 0, true, 60, 30, "Bet ₹1=1EXP", listOf(Color(0xFF6B9BD1), Color(0xFF4A7BA7))),
+            VipLevel(2, 30000, 0, true, 180, 90, "Bet ₹1=1EXP", listOf(Color(0xFFE67E22), Color(0xFFD35400))),
+            VipLevel(3, 30000, 0, true, 300, 150, "Bet ₹1=1EXP", listOf(Color(0xFFE74C3C), Color(0xFFC0392B))),
+            VipLevel(4, 2000000, 0, true, 500, 250, "Bet ₹1=1EXP", listOf(Color(0xFF9B59B6), Color(0xFF8E44AD))),
+            VipLevel(5, 2000000, 0, true, 800, 400, "Bet ₹1=1EXP", listOf(Color(0xFF1ABC9C), Color(0xFF16A085))),
+            VipLevel(6, 2000000, 0, true, 1200, 600, "Bet ₹1=1EXP", listOf(Color(0xFFF39C12), Color(0xFFE67E22))),
+            VipLevel(7, 5000000, 0, true, 2000, 1000, "Bet ₹1=1EXP", listOf(Color(0xFF34495E), Color(0xFF2C3E50))),
+            VipLevel(8, 10000000, 0, true, 3500, 1750, "Bet ₹1=1EXP", listOf(Color(0xFFE91E63), Color(0xFFC2185B))),
+            VipLevel(9, 10000000, 0, true, 6000, 3000, "Bet ₹1=1EXP", listOf(Color(0xFF673AB7), Color(0xFF512DA8))),
+            VipLevel(10, 50000000, 0, true, 10000, 5000, "Bet ₹1=1EXP", listOf(Color(0xFFFFD700), Color(0xFFFFA000)))
         )
     }
 
@@ -141,7 +155,6 @@ fun VipScreen(
                             strokeWidth = 1.5f,
                         )
                     }
-
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
@@ -167,7 +180,7 @@ fun VipScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             // User Info Section
-            UserInfoSection()
+            UserInfoSection(vipState)
 
             // VIP Level Rewards Info
             VipRewardsInfo()
@@ -183,13 +196,13 @@ fun VipScreen(
             BenefitsSection(selectedVip = selectedVip)
 
             // My Benefits Section
-            MyBenefitsSection()
+            MyBenefitsSection(onHistoryClick = { navController.navigate("vip_reward_history") })
         }
     }
 }
 
 @Composable
-fun UserInfoSection() {
+fun UserInfoSection(vipState: VipUiState) {
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -224,17 +237,37 @@ fun UserInfoSection() {
                 Spacer(modifier = Modifier.width(16.dp))
 
                 Column {
-                    Text(
-                        text = "UID = 6763043294",
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = "Levels = 0.0",
-                        color = Color.White,
-                        fontSize = 14.sp
-                    )
+                    when (vipState) {
+                        is VipUiState.Loading -> {
+                            Text(
+                                text = "Loading...",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        is VipUiState.Error -> {
+                            Text(
+                                text = "Error: ${vipState.message}",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        is VipUiState.Success -> {
+                            Text(
+                                text = "UID = ${vipState.vipInfo.userId}",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "Level = ${vipState.vipInfo.levelUser}",
+                                color = Color.White,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -258,17 +291,47 @@ fun UserInfoSection() {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                InfoCard(
-                    title = "1432120 EXP",
-                    subtitle = "My Experience",
-                    modifier = Modifier.weight(1f)
-                )
-                InfoCard(
-                    title = "4 Days",
-                    subtitle = "Payout time",
-                    modifier = Modifier.weight(1f),
-                    titleColor = Color.Black
-                )
+                when (vipState) {
+                    is VipUiState.Success -> {
+                        InfoCard(
+                            title = "${vipState.vipInfo.totalExp} EXP",
+                            subtitle = "My Experience",
+                            modifier = Modifier.weight(1f)
+                        )
+                        InfoCard(
+                            title = "${vipState.vipInfo.daysLeft} Days",
+                            subtitle = "Payout time",
+                            modifier = Modifier.weight(1f),
+                            titleColor = Color.Black
+                        )
+                    }
+                    is VipUiState.Loading -> {
+                        InfoCard(
+                            title = "...",
+                            subtitle = "My Experience",
+                            modifier = Modifier.weight(1f)
+                        )
+                        InfoCard(
+                            title = "...",
+                            subtitle = "Payout time",
+                            modifier = Modifier.weight(1f),
+                            titleColor = Color.Black
+                        )
+                    }
+                    is VipUiState.Error -> {
+                        InfoCard(
+                            title = "-",
+                            subtitle = "My Experience",
+                            modifier = Modifier.weight(1f)
+                        )
+                        InfoCard(
+                            title = "-",
+                            subtitle = "Payout time",
+                            modifier = Modifier.weight(1f),
+                            titleColor = Color.Black
+                        )
+                    }
+                }
             }
         }
     }
@@ -657,7 +720,7 @@ fun BenefitItem(
 }
 
 @Composable
-fun MyBenefitsSection() {
+fun MyBenefitsSection(onHistoryClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -713,7 +776,7 @@ fun MyBenefitsSection() {
                     color = Color(0xFFFF6B35),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.clickable { }
+                    modifier = Modifier.clickable { onHistoryClick() }
                 )
                 Text(
                     text = "Rules",
