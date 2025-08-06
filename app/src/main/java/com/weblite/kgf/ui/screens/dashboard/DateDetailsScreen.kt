@@ -22,8 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.weblite.kgf.ui.viewmodel.PromotionViewModel
 import com.weblite.kgf.Api2.Resource
-import java.text.SimpleDateFormat
-import java.util.Locale
+import com.weblite.kgf.util.DateFormatUtil
 
 @Composable
 fun DateDetailsScreen(
@@ -33,17 +32,7 @@ fun DateDetailsScreen(
     val commissionDetailsState = viewModel.commissionDateDetailsState.value
     val userId = com.weblite.kgf.Api2.SharedPrefManager.getString("user_id", "0") ?: "0"
 
-    // Helper to convert dd-MMM-yyyy to yyyy-MM-dd
-    fun formatDateForApi(input: String): String {
-        return try {
-            val inputFormat = SimpleDateFormat("dd-MMM-yyyy", Locale.US)
-            val outputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            outputFormat.format(inputFormat.parse(input)!!)
-        } catch (e: Exception) {
-            input // fallback to original if parsing fails
-        }
-    }
-    val apiDate = formatDateForApi(date)
+    val apiDate = DateFormatUtil.formatDisplayDateToApi(date)
 
     LaunchedEffect(userId, apiDate) {
         viewModel.fetchPromotionCommissionDateDetails(userId, apiDate)

@@ -82,17 +82,9 @@ fun PromotionMainScreen(
     onBackClick: () -> Unit = {},
     onShowTopBar: (Boolean) -> Unit,
     onShowBottomBar: (Boolean) -> Unit,
-    viewModel: MainViewModel = hiltViewModel(),
     promotionViewModel: PromotionViewModel = hiltViewModel()
 ){
-    val commissionState = viewModel.commissionState.value
-    val userid = SharedPrefManager.getString("user_id","0")
-    LaunchedEffect(key1 = userid) {
-        viewModel.fetchCommissions(userid)
-    }
     val scrollState = rememberScrollState()
-    // Remove dialog state, navigation will be used
-    val selectedUserId = userid.toString()
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -100,40 +92,8 @@ fun PromotionMainScreen(
             .verticalScroll(scrollState)
             .padding(bottom = 16.dp)
     ) {
-        if (commissionState is Resource.Success) {
-            val commissions = commissionState.data?.commissionData ?: emptyList()
-            Row(
-                Modifier.fillMaxWidth().background(Color(0xFF003366)).padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("Sr", color = Color.White, modifier = Modifier.weight(0.5f), textAlign = TextAlign.Center)
-                Text("Amount", color = Color.White, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                Text("Date", color = Color.White, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                Text("Act", color = Color.White, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-            }
-            commissions.forEachIndexed { idx, commission ->
-                Row(
-                    Modifier.fillMaxWidth().background(if (idx % 2 == 0) Color(0xFFeaf6ff) else Color.White).padding(vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("${idx + 1}", modifier = Modifier.weight(0.5f), textAlign = TextAlign.Center)
-                    Text(commission.amount, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                    Text(commission.date, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                    Button(
-                        onClick = {
-                            navController.navigate("commission_details/${commission.date}")
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE8FF00), contentColor = Color.Black),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Details", fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
         AgencyCommissionUI(navController = navController)
-        InvitationDashboardUI(userId = userid.toString(), navController = navController)
+        InvitationDashboardUI(navController = navController)
     }
 }
 

@@ -105,9 +105,9 @@ class UserRepository @Inject constructor(
     }
 
     // commission
-    suspend fun getCommissions(userId: String?): Response<CommissionResponse> {
-        return apiService.getCommissions(userId)
-    }
+//    suspend fun getCommissions(userId: String?): Response<CommissionResponse> {
+//        return apiService.getCommissions(userId)
+//    }
 
     suspend fun getPromotionView(userId: String): Response<PromotionViewResponse> {
         return apiService.getPromotionView(userId)

@@ -51,8 +51,6 @@ interface ApiService {
         @Query("user_id") userId: String
     ): Response<ProfileResponseWrapper>
 
-    @GET("web/Api/myCommissions")
-    suspend fun getCommissions(@Query("user_id") userId: String?): Response<CommissionResponse>
 
     @GET("web/Api/promotionView")
     suspend fun getPromotionView(@Query("user_id") userId: String): Response<PromotionViewResponse>

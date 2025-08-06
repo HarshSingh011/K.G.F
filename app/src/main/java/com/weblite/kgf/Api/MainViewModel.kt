@@ -214,26 +214,7 @@ class MainViewModel @Inject constructor(
     // get profile
     var commissionState = mutableStateOf<Resource<CommissionResponse>?>(null)
         private set
-    fun fetchCommissions(userId: String?) {
-        viewModelScope.launch {
-            commissionState.value = Resource.Loading()
-            try {
-                val response = repository.getCommissions(userId)
-                if (response.isSuccessful) {
-                    response.body()?.let {
-                        Log.d("COMMISSION_RESPONSE", "Success: $it")
-                        commissionState.value = Resource.Success(it)
-                    } ?: run {
-                        commissionState.value = Resource.Error("Empty response")
-                    }
-                } else {
-                    commissionState.value = Resource.Error("Server error: ${response.code()}")
-                }
-            } catch (e: Exception) {
-                commissionState.value = Resource.Error("Exception: ${e.message}")
-            }
-        }
-    }
+
 
     fun resetCommissionState() {
         commissionState.value = null

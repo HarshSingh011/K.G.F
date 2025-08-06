@@ -35,41 +35,34 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.weblite.kgf.Api2.Resource
+import com.weblite.kgf.domain.model.MyCommissionsResponse
+import com.weblite.kgf.domain.model.MyCommission
+import com.weblite.kgf.util.DateFormatUtil
+import com.weblite.kgf.ui.viewmodel.PromotionViewModel
+
 
 @Composable
 fun CommissionDetails(
     navController: NavController,
     onBackClick: () -> Unit = {},
     onShowTopBar: (Boolean) -> Unit,
-    onShowBottomBar: (Boolean) -> Unit
+    onShowBottomBar: (Boolean) -> Unit,
+    viewModel: PromotionViewModel = hiltViewModel()
 ){
-    
-    val commissions = listOf(
-        Triple("0.0840", "24-May-2025", 1),
-        Triple("232.0600", "23-May-2025", 2),
-        Triple("55.1916", "22-May-2025", 3),
-        Triple("3.9108", "17-May-2025", 4),
-        Triple("1.1572", "14-May-2025", 5),
-        Triple("13.8600", "13-May-2025", 6),
-        Triple("0.0032", "06-Feb-2025", 7),
-        Triple("0.0220", "05-Feb-2025", 8),
-        Triple("0.4000", "28-Jan-2025", 9),
-        Triple("0.4000", "28-Jan-2025", 9),
-        Triple("0.4000", "28-Jan-2025", 9),
-        Triple("0.4000", "28-Jan-2025", 9),
-        Triple("0.4000", "28-Jan-2025", 9),
-        Triple("0.4000", "28-Jan-2025", 9)
-    )
-
-    val totalCommission = commissions.sumOf { it.first.toDouble() }
+    val commissionState = viewModel.commissionsState.value
     val scrollState = rememberScrollState()
-    val context = LocalContext.current
     val backgroundColor = Brush.verticalGradient(
         colors = listOf(Color(0xFF001B40), Color(0xFF002D60))
     )
     LaunchedEffect(Unit) {
         onShowTopBar(true)
         onShowBottomBar(false)
+        val userId = com.weblite.kgf.Api2.SharedPrefManager.getString("user_id", "0") ?: "0"
+        viewModel.fetchMyCommissions(userId)
     }
 
     Column(
@@ -77,9 +70,7 @@ fun CommissionDetails(
             .fillMaxSize()
             .background(brush = backgroundColor)
             .padding(16.dp)
-
-    ){
-
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -109,27 +100,38 @@ fun CommissionDetails(
         Spacer(modifier = Modifier.height(28.dp))
 
         // Total Commission Card
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .shadow(
-                    elevation = 4.dp,
-                    shape = RoundedCornerShape(32.dp),
-                    ambientColor = Color(0xff00EBEF),
-                    spotColor = Color(0xff00EBEF)
+        if (commissionState is Resource.Success) {
+            val totalCommission = commissionState.data?.result?.totalCommission?.toDoubleOrNull() ?: 0.0
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(
+                        elevation = 4.dp,
+                        shape = RoundedCornerShape(32.dp),
+                        ambientColor = Color(0xff00EBEF),
+                        spotColor = Color(0xff00EBEF)
+                    )
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(Color.White)
+                    .border(2.dp, Color(0xFF29659A), RoundedCornerShape(32.dp))
+                    .padding(vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Total Commission: %.4f".format(totalCommission),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color(0xFF003366)
                 )
-                .clip(RoundedCornerShape(32.dp))
-                .background(Color.White)
-                .border(2.dp, Color(0xFF29659A), RoundedCornerShape(32.dp))
-                .padding(vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Total Commission: %.4f".format(totalCommission),
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = Color(0xFF003366)
-            )
+            }
+        }
+        if (commissionState is Resource.Loading) {
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                androidx.compose.material3.CircularProgressIndicator()
+            }
+        }
+        if (commissionState is Resource.Error) {
+            Text("Error: ${commissionState.message}", color = Color.Red)
         }
 
         Spacer(modifier = Modifier.height(22.dp))
@@ -148,7 +150,7 @@ fun CommissionDetails(
                 .clip(RoundedCornerShape(20.dp))
                 .border(2.dp, Color(0xFF29659A), RoundedCornerShape(20.dp))
                 .background(Color.White)
-        ){
+        ) {
             val textclr = Color.Black
             // Table Header
             Row(
@@ -168,31 +170,31 @@ fun CommissionDetails(
             Column(
                 modifier = Modifier.verticalScroll(scrollState)
                     .fillMaxSize()
-            ){
-
+            ) {
                 Spacer(modifier = Modifier.height(4.dp))
-
-                // Table Rows
-                commissions.forEach { (amount, date, index) ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color.White, RoundedCornerShape(12.dp))
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("$index", color = textclr, fontSize = 14.sp, modifier = Modifier.weight(0.48f))
-                        Text(amount, color = textclr, fontSize = 14.sp, modifier = Modifier.weight(0.89f))
-                        Text(date, color = textclr, fontSize = 14.sp, modifier = Modifier.weight(0.98f))
-                        Spacer(modifier = Modifier.width(3.dp))
-                        CommissionDetailButton(
-                            modifier = Modifier.weight(0.8f),
-                            onClick = {
-                                navController.navigate("commission_details/${date}")
-                            }
-                        )
+                if (commissionState is Resource.Success) {
+                    val commissions = commissionState.data?.result?.myCommissions ?: emptyList()
+                    commissions.forEachIndexed { idx, item ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.White, RoundedCornerShape(12.dp))
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("${idx + 1}", color = textclr, fontSize = 14.sp, modifier = Modifier.weight(0.48f))
+                            Text(item.dayCommissionAmount, color = textclr, fontSize = 14.sp, modifier = Modifier.weight(0.89f))
+                            Text(DateFormatUtil.formatApiDateToDisplay(item.date), color = textclr, fontSize = 14.sp, modifier = Modifier.weight(0.98f))
+                            Spacer(modifier = Modifier.width(3.dp))
+                            CommissionDetailButton(
+                                modifier = Modifier.weight(0.8f),
+                                onClick = {
+                                    navController.navigate("commission_details/${item.date}")
+                                }
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
                     }
-                    Spacer(modifier = Modifier.height(2.dp))
                 }
             }
         }
