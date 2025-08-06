@@ -1,5 +1,7 @@
+
 package com.weblite.kgf.ui.screens.game.screens
 
+import com.weblite.kgf.ui.components.AnimatedDice
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -171,6 +173,7 @@ fun K3Ui60(
     }
 
     var displayedDice by remember { mutableStateOf(listOf(1, 1, 1)) }
+    var isRolling by remember { mutableStateOf(false) }
     var lastTimeRemainingForDice by remember { mutableStateOf(timeRemaining) }
     var showBettingPopup by remember { mutableStateOf(false) }
     var selectedNumberForBetting by remember { mutableStateOf<Int?>(null) }
@@ -237,19 +240,24 @@ fun K3Ui60(
     }
 
     // --- All LaunchedEffects and logic below functions ---
-    LaunchedEffect(Unit) {
+
+    // Trigger dice animation and update every time k3PeriodId changes (i.e., on navigation)
+    LaunchedEffect(k3PeriodId) {
+        isRolling = true
         viewModel.fetchK3GameHistory()
+        kotlinx.coroutines.delay(300)
         updateDiceFromHistory()
+        isRolling = false
     }
 
-    LaunchedEffect(timeRemaining, gameHistoryResource) {
-        if (lastTimeRemainingForDice < timeRemaining) {
+    LaunchedEffect(timeRemaining) {
+        if (timeRemaining == 0L) {
+            isRolling = true
             viewModel.fetchK3GameHistory()
-            // Wait for gameHistoryResource to update, then update dice
-            // (gameHistoryResource is a StateFlow, so this effect will rerun)
+            kotlinx.coroutines.delay(300)
+            updateDiceFromHistory()
+            isRolling = false
         }
-        updateDiceFromHistory()
-        lastTimeRemainingForDice = timeRemaining
     }
 
     LaunchedEffect(Unit) {
@@ -552,11 +560,10 @@ fun K3Ui60(
                                                     ),
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                Image(
-                                                    painter = painterResource(id = com.weblite.kgf.utils.DiceUtils.getDiceDrawable(diceValue)),
-                                                    contentDescription = "Dice ${index + 1}",
-                                                    modifier = Modifier.size(55.dp),
-                                                    contentScale = ContentScale.Fit
+                                                AnimatedDice(
+                                                    diceValue = diceValue,
+                                                    isRolling = isRolling,
+                                                    getDiceDrawable = { com.weblite.kgf.utils.DiceUtils.getDiceDrawable(it) }
                                                 )
                                             }
                                         }

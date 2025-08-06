@@ -53,16 +53,15 @@ class K360GameViewModel @Inject constructor(
 
     init {
         fetchK3PeriodIdAndStartTimer()
-        startGameHistoryPolling()
+        // Removed polling: fetchK3GameHistory will be called only at correct times
     }
 
     fun setActiveHistoryTab(tab: String) {
         _activeHistoryTab.value = tab
         if (tab == "My History") {
-            stopGameHistoryPolling()
             fetchK3MyHistory()
         } else {
-            startGameHistoryPolling()
+            fetchK3GameHistory()
         }
     }
 
@@ -111,6 +110,8 @@ class K360GameViewModel @Inject constructor(
                             delay(500)
                             fetchK3PeriodIdAndStartTimer()
                         } else {
+                            // Fetch dice/game history at the start of each period
+                            fetchK3GameHistory()
                             startTimerCountdown()
                         }
                     } ?: run {
@@ -154,22 +155,9 @@ class K360GameViewModel @Inject constructor(
         }
     }
 
-    private fun startGameHistoryPolling() {
-        gameHistoryPollingJob?.cancel()
-        gameHistoryPollingJob = viewModelScope.launch {
-            Log.d("K360GameViewModel", "Starting K3 Game History polling")
-            while (true) {
-                fetchK3GameHistory()
-                delay(3000)
-            }
-        }
-    }
+    // Removed polling job. No longer needed.
 
-    private fun stopGameHistoryPolling() {
-        Log.d("K360GameViewModel", "Stopping K3 Game History polling")
-        gameHistoryPollingJob?.cancel()
-        gameHistoryPollingJob = null
-    }
+    // Removed polling job. No longer needed.
 
     fun fetchK3GameHistory() {
         viewModelScope.launch {

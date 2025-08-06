@@ -77,6 +77,7 @@ import com.weblite.kgf.data.models.games.K3PopupHistoryResponse
 import com.weblite.kgf.ui.components.K330BettingPopupDialog
 import com.weblite.kgf.ui.components.PaginationState
 import com.weblite.kgf.utils.DiceUtils
+import com.weblite.kgf.ui.components.AnimatedDice
 import kotlinx.coroutines.delay
 import com.weblite.kgf.utils.K3Utils
 import com.weblite.kgf.utils.K3Ball
@@ -102,6 +103,7 @@ fun K3Ui30(
     val activeHistoryTab = viewModel.activeHistoryTab.collectAsStateWithLifecycle().value
 
     var displayedDice by remember { mutableStateOf(listOf(1, 1, 1)) }
+    var isRolling by remember { mutableStateOf(false) }
     var lastTimeRemainingForDice by remember { mutableStateOf(timeRemaining) }
     var showBettingPopup by remember { mutableStateOf(false) }
     var selectedNumberForBetting by remember { mutableStateOf<Int?>(null) }
@@ -203,17 +205,20 @@ fun K3Ui30(
     // --- All LaunchedEffects and logic below functions ---
     LaunchedEffect(Unit) {
         viewModel.fetchK3GameHistory()
+        isRolling = true
+        kotlinx.coroutines.delay(300)
         updateDiceFromHistory()
+        isRolling = false
     }
 
-    LaunchedEffect(timeRemaining, gameHistoryResource) {
-        if (lastTimeRemainingForDice < timeRemaining) {
+    LaunchedEffect(timeRemaining) {
+        if (timeRemaining == 0L) {
+            isRolling = true
             viewModel.fetchK3GameHistory()
-            // Wait for gameHistoryResource to update, then update dice
-            // (gameHistoryResource is a StateFlow, so this effect will rerun)
+            kotlinx.coroutines.delay(300)
+            updateDiceFromHistory()
+            isRolling = false
         }
-        updateDiceFromHistory()
-        lastTimeRemainingForDice = timeRemaining
     }
 
     LaunchedEffect(popupHistoryResponse) {
@@ -589,11 +594,10 @@ fun K3Ui30(
                                                     ),
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                Image(
-                                                    painter = painterResource(id = DiceUtils.getDiceDrawable(diceValue)),
-                                                    contentDescription = "Dice ${index + 1}",
-                                                    modifier = Modifier.size(55.dp),
-                                                    contentScale = ContentScale.Fit
+                                                AnimatedDice(
+                                                    diceValue = diceValue,
+                                                    isRolling = isRolling,
+                                                    getDiceDrawable = { DiceUtils.getDiceDrawable(it) }
                                                 )
                                             }
                                         }
