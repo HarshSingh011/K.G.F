@@ -49,7 +49,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.weblite.kgf.Api2.MainViewModel
-import com.weblite.kgf.ui.viewmodel.PromotionViewModel
 import com.weblite.kgf.Api2.Resource
 import com.weblite.kgf.Api2.SharedPrefManager
 import com.weblite.kgf.navigation.COMMISS_DETAILS
@@ -59,6 +58,7 @@ import com.weblite.kgf.ui.components.AttractiveText
 
 import com.weblite.kgf.navigation.PromotionNavHost
 import com.weblite.kgf.navigation.REBATE_RATIO
+import com.weblite.kgf.ui.viewmodel.PromotionViewModel
 
 // Navigation constants moved to PromotionNavHost.kt
 @Composable
@@ -85,33 +85,8 @@ fun PromotionMainScreen(
     promotionViewModel: PromotionViewModel = hiltViewModel()
 ){
     val scrollState = rememberScrollState()
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color(0xFF002051))
-            .verticalScroll(scrollState)
-            .padding(bottom = 16.dp)
-    ) {
-        AgencyCommissionUI(navController = navController)
-        InvitationDashboardUI(navController = navController)
-    }
-}
-
-////
-
-
-
-@Composable
-fun AgencyCommissionUI(
-    navController: NavController,
-    directTeamRegistered: Int = 4,
-    indirectTeamRegistered: Int = 8,
-    indirectFirstDepositPeople: Int = 0,
-    invitationLnk: String = "https://newkgfindia.com/login/rgister?referid=6763043294",
-    onCopyClick: () -> Unit = {},
-    viewModel: MainViewModel = hiltViewModel()
-) {
-    val promotionViewState = viewModel.promotionViewState.value
+    val promotionViewModel = promotionViewModel
+    val promotionViewState = promotionViewModel.promotionViewState.value
     var userId by remember { mutableStateOf("") }
     var rowCount by remember { mutableStateOf(0) }
     var referralCount by remember { mutableStateOf(0) }
@@ -124,13 +99,14 @@ fun AgencyCommissionUI(
     var myTodayCommission by remember { mutableStateOf("0") }
     var totalCommission by remember { mutableStateOf("0.0000") }
 
-
+    // Fetch promotion view data on launch
     LaunchedEffect(Unit) {
-        val userId = SharedPrefManager.getString("user_id", "0")
-        viewModel.fetchPromotionView(userId.toString())
+        val uid = SharedPrefManager.getString("user_id", "0") ?: "0"
+        userId = uid
+        promotionViewModel.fetchPromotionView(uid)
     }
-    val invitationLnk = "https://newkgfindia.com/login/ragister?referid=$userId"
 
+    // Update state when API response changes
     LaunchedEffect(promotionViewState) {
         if (promotionViewState is Resource.Success) {
             promotionViewState.data?.result?.let { result ->
@@ -149,24 +125,50 @@ fun AgencyCommissionUI(
         }
     }
 
-    ////////////////
+    val invitationLnk = "https://newkgfindia.com/login/ragister?referid=$userId"
 
-
-    when (promotionViewState) {
-        is Resource.Loading -> { /* show loading */ }
-        is Resource.Success -> {
-            val data = promotionViewState.data?.result
-            Log.d("PROMO_VIEW", "Referral: ${data?.referralCount}, Total: ${data?.totalCommission}")
-            // Bind to UI
-        }
-        is Resource.Error -> { /* show error */ }
-        null -> { /* initial state */ }
-        else -> {}
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color(0xFF002051))
+            .verticalScroll(scrollState)
+            .padding(bottom = 16.dp)
+    ) {
+        AgencyCommissionUI(
+            navController = navController,
+            directTeamRegistered = rowCount,
+            indirectTeamRegistered = referralCount,
+            directDepositNumber = directDepositNumber,
+            directDepositAmount = directDepositAmount,
+            directFirstDepositPeople = directFirstDepositPeople,
+            indirectDepositNumber = indirectDepositNumber,
+            indirectDepositAmount = indirectDepositAmount,
+            indirectFirstDepositPeople = indirectFirstDepositCount,
+            myTodayCommission = myTodayCommission,
+            totalCommission = totalCommission,
+            invitationLnk = invitationLnk
+        )
+        InvitationDashboardUI(userId = userId, navController = navController)
     }
+}
 
 
-
-
+@Composable
+fun AgencyCommissionUI(
+    navController: NavController,
+    directTeamRegistered: Int,
+    indirectTeamRegistered: Int,
+    directDepositNumber: Int,
+    directDepositAmount: Int,
+    directFirstDepositPeople: Int,
+    indirectDepositNumber: Int,
+    indirectDepositAmount: Int,
+    indirectFirstDepositPeople: Int,
+    myTodayCommission: String,
+    totalCommission: String,
+    invitationLnk: String,
+    onCopyClick: () -> Unit = {}
+) {
     val darkBlue = Color(0xFF061B43)
     val lightBlue = Color(0xFF028bed)
     val neonYellow = Color(0xFFE8FF00)
@@ -227,13 +229,13 @@ fun AgencyCommissionUI(
             // Info Box
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.6f) //
+                    .fillMaxWidth(0.6f)
                     .shadow(
-                    elevation = 20.dp, //
-                    shape = RoundedCornerShape(6.dp),
-                    ambientColor = Color(0xFF00EBEF),
-                    spotColor = Color(0xFF00EBEF)
-                )
+                        elevation = 20.dp,
+                        shape = RoundedCornerShape(6.dp),
+                        ambientColor = Color(0xFF00EBEF),
+                        spotColor = Color(0xFF00EBEF)
+                    )
                     .background(
                         brush = Brush.horizontalGradient(
                             listOf(neonYellow, Color(0xFFB0B800))
@@ -271,9 +273,9 @@ fun AgencyCommissionUI(
                     .padding(horizontal = 8.dp)
                     .height(IntrinsicSize.Min)
                     .shadow(
-                        elevation = 10.dp, // Shadow depth
+                        elevation = 10.dp,
                         shape = RoundedCornerShape(12.dp),
-                        ambientColor = Color(0xff00b8bb), // Shadow color
+                        ambientColor = Color(0xff00b8bb),
                         spotColor = Color(0xff00EBEF)
                     )
                     .clip(RoundedCornerShape(12.dp))
@@ -385,10 +387,10 @@ fun AgencyCommissionUI(
                 modifier = Modifier
                     .fillMaxWidth(0.95f)
                     .shadow(
-                        elevation = 12.dp, // Adjust elevation for stronger shadow
+                        elevation = 12.dp,
                         shape = RoundedCornerShape(20.dp),
-                        ambientColor = Color(0xFF054fe3), // Soft shadow color00b8bb
-                        spotColor = Color(0xFF00b8bb) // Sharp shadow color
+                        ambientColor = Color(0xFF054fe3),
+                        spotColor = Color(0xFF00b8bb)
                     )
                     .border(width = 2.dp, color = Color.Black, shape = RoundedCornerShape(20.dp))
             ) {
@@ -416,7 +418,6 @@ fun AgencyCommissionUI(
                     )
 
                     Button(
-
                         onClick = {
                             clipboardManager.setText(AnnotatedString(invitationLnk))
                         },
@@ -427,8 +428,8 @@ fun AgencyCommissionUI(
                         modifier = Modifier
                             .fillMaxWidth(0.77f)
                             .height(38.dp),
-                        shape = RoundedCornerShape(12.dp), // Ensures the border follows the shape
-                        border = BorderStroke(2.dp, Color.Black) // Properly applies the border
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(2.dp, Color.Black)
                     ) {
                         Icon(Icons.Default.ContentCopy, contentDescription = "Copy invitation link")
                         Spacer(modifier = Modifier.width(8.dp))
@@ -631,41 +632,40 @@ fun PromotionDataCard(
     icon: ImageVector,
     iconDescription: String,
     modifier: Modifier = Modifier,
-    viewModel: MainViewModel = hiltViewModel()
+    viewModel: PromotionViewModel = hiltViewModel()
 ) {
-
     val promotionViewState = viewModel.promotionViewState.value
-
     var title by remember { mutableStateOf("Promotion Data") }
-    var weekValue by remember { mutableStateOf(0) }
+    var weekValue by remember { mutableStateOf(0) } // If you have week data, map it here
     var totalDirectTeamValue by remember { mutableStateOf(0) }
     var totalIndirectTeamValue by remember { mutableStateOf(0) }
     var totalCommission by remember { mutableStateOf("0.0000") }
 
     LaunchedEffect(Unit) {
-        val userId = SharedPrefManager.getString("user_id", "0")
-        viewModel.fetchPromotionView(userId.toString())
+        val userId = com.weblite.kgf.Api2.SharedPrefManager.getString("user_id", "0") ?: "0"
+        viewModel.fetchPromotionView(userId)
     }
     LaunchedEffect(promotionViewState) {
-        if (promotionViewState is Resource.Success) {
+        if (promotionViewState is com.weblite.kgf.Api2.Resource.Success) {
             promotionViewState.data?.result?.let { result ->
                 totalCommission = result.totalCommission
+                totalDirectTeamValue = result.rowCount
+                totalIndirectTeamValue = result.referralCount
             }
         }
     }
 
-
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(2.dp, Color.Black), // Adds a black border
+        border = BorderStroke(2.dp, Color.Black),
         modifier = modifier
             .fillMaxWidth()
             .shadow(
-                elevation = 6.dp, // shadow depth
+                elevation = 6.dp,
                 shape = RoundedCornerShape(12.dp),
-                ambientColor = Color(0xFF00b8bb), // Soft, diffused shadow
-                spotColor = Color(0xFF00b8bb) // Sharp, focused shadow
+                ambientColor = Color(0xFF00b8bb),
+                spotColor = Color(0xFF00b8bb)
             )
     ) {
         Column(

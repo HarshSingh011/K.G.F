@@ -60,4 +60,17 @@ class PromotionRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
+    override suspend fun getPromotionView(userId: String): Result<com.weblite.kgf.domain.model.PromotionViewResponse> {
+        return try {
+            val response = api.getPromotionView(userId)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception(response.message()))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

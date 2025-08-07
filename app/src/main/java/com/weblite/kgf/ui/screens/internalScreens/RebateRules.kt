@@ -126,6 +126,8 @@ fun RebateRules(
         Spacer(modifier = Modifier.height(16.dp))
         RebateCard(levelNumber = 0)
         Spacer(modifier = Modifier.height(12.dp))
+        RebateCard(levelNumber = 1)
+        Spacer(modifier = Modifier.height(12.dp))
         RebateCard(levelNumber = 2)
         Spacer(modifier = Modifier.height(12.dp))
         RebateCard(levelNumber = 3)
@@ -135,7 +137,14 @@ fun RebateRules(
         RebateCard(levelNumber = 5)
         Spacer(modifier = Modifier.height(12.dp))
         RebateCard(levelNumber = 6)
-
+        Spacer(modifier = Modifier.height(12.dp))
+        RebateCard(levelNumber = 7)
+        Spacer(modifier = Modifier.height(12.dp))
+        RebateCard(levelNumber = 8)
+        Spacer(modifier = Modifier.height(12.dp))
+        RebateCard(levelNumber = 9)
+        Spacer(modifier = Modifier.height(12.dp))
+        RebateCard(levelNumber = 10)
 
     }
 }

@@ -5,6 +5,7 @@ import com.weblite.kgf.domain.model.MyCommissionsResponse
 import com.weblite.kgf.domain.model.DirectTeamDataResponse
 
 interface PromotionRepository {
+    suspend fun getPromotionView(userId: String): Result<com.weblite.kgf.domain.model.PromotionViewResponse>
     suspend fun getDirectTeamDataWithDate(userId: String, joiningDate: String): Result<DirectTeamDataResponse>
     suspend fun getPromotionCommissionDateDetails(userId: String, date: String): Result<PromotionCommissionDateDetailsResponse>
 

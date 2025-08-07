@@ -11,17 +11,19 @@ import com.weblite.kgf.domain.model.DirectTeamDataResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.weblite.kgf.domain.model.PromotionViewResponse
 
 @HiltViewModel
 class PromotionViewModel @Inject constructor(
-    // New API for direct team data by date
-
     private val repository: PromotionRepository
 ) : ViewModel() {
     var commissionDateDetailsState = mutableStateOf<Resource<PromotionCommissionDateDetailsResponse>?>(null)
         private set
 
     var commissionsState = mutableStateOf<Resource<MyCommissionsResponse>?>(null)
+        private set
+
+    var promotionViewState = mutableStateOf<Resource<PromotionViewResponse>?>(null)
         private set
 
     var directTeamDataState = mutableStateOf<Resource<DirectTeamDataResponse>?>(null)
@@ -87,6 +89,22 @@ class PromotionViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 directTeamDataState.value = Resource.Error<DirectTeamDataResponse>(e.message ?: "Unknown error")
+            }
+        }
+    }
+
+    fun fetchPromotionView(userId: String) {
+        viewModelScope.launch {
+            promotionViewState.value = Resource.Loading()
+            try {
+                val result = repository.getPromotionView(userId)
+                result.onSuccess {
+                    promotionViewState.value = Resource.Success(it)
+                }.onFailure {
+                    promotionViewState.value = Resource.Error(it.message ?: "Unknown error")
+                }
+            } catch (e: Exception) {
+                promotionViewState.value = Resource.Error(e.message ?: "Unknown error")
             }
         }
     }
