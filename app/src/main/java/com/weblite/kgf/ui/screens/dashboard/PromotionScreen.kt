@@ -105,7 +105,7 @@ fun PromotionMainScreen(
 fun AgencyCommissionUI(
     navController: NavController,
     directTeamRegistered: Int = 4,
-    indirectTeamRegistered: Int = 7,
+    indirectTeamRegistered: Int = 8,
     indirectFirstDepositPeople: Int = 0,
     invitationLnk: String = "https://newkgfindia.com/login/rgister?referid=6763043294",
     onCopyClick: () -> Unit = {},

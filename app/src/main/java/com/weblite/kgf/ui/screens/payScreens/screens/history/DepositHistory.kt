@@ -250,7 +250,8 @@ fun DepositHistory(
                         amount = it.total_amount ?: it.pay_amount ?: "-",
                         time = it.post_date ?: "-",
                         orderNumber = it.order_no ?: "-",
-                        status = it.step_2 ?: "-"
+                        status = it.step_2 ?: "-",
+                        reason = it.reason
                     )
                 }
             } else {
@@ -264,15 +265,17 @@ fun DepositHistory(
 
 
 @Composable
-fun DepositCard(amount: String, time: String, orderNumber: String, status: String) {
-    val statusColor = when (status.lowercase()) {
-        "approved" -> Color(0xFF28A745)
-        "failed" -> Color(0xFFFF0000)
+fun DepositCard(amount: String, time: String, orderNumber: String, status: String, reason: String? = null) {
+    val statusLower = status.lowercase()
+    val isRejected = statusLower == "rejected"
+    val statusColor = when {
+        statusLower == "approved" -> Color(0xFF28A745)
+        statusLower == "failed" || isRejected -> Color(0xFFFF0000)
         else -> Color(0xFFFFC107)
     }
-    val statusTextColor = when (status.lowercase()) {
-        "approved" -> Color(0xFFFFFFFF)
-        "failed" -> Color(0xFFFFFFFF)
+    val statusTextColor = when {
+        statusLower == "approved" -> Color(0xFFFFFFFF)
+        statusLower == "failed" || isRejected -> Color(0xFFFFFFFF)
         else -> Color(0xFF000000)
     }
 
@@ -339,6 +342,20 @@ fun DepositCard(amount: String, time: String, orderNumber: String, status: Strin
                 fontSize = 14.sp
             )
 
+            if (isRejected && !reason.isNullOrBlank()) {
+                Text(
+                    buildAnnotatedString {
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Red)) {
+                            append("Reason: ")
+                        }
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Normal, color = Color.Red)) {
+                            append(reason)
+                        }
+                    },
+                    color = Color.Red,
+                    fontSize = 14.sp
+                )
+            }
         }
     }
 }

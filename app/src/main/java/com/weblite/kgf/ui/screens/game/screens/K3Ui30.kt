@@ -105,6 +105,7 @@ fun K3Ui30(
     var displayedDice by remember { mutableStateOf(listOf(1, 1, 1)) }
     var isRolling by remember { mutableStateOf(false) }
     var lastTimeRemainingForDice by remember { mutableStateOf(timeRemaining) }
+    var waitingForTimerUpdate by remember { mutableStateOf(false) }
     var showBettingPopup by remember { mutableStateOf(false) }
     var selectedNumberForBetting by remember { mutableStateOf<Int?>(null) }
     var selectedBetTypeForBetting by remember { mutableStateOf<String?>(null) }
@@ -211,13 +212,22 @@ fun K3Ui30(
         isRolling = false
     }
 
+    // When timer completes, start animation and fetch new data
     LaunchedEffect(timeRemaining) {
-        if (timeRemaining == 0L) {
+        if (timeRemaining == 0L && !waitingForTimerUpdate) {
             isRolling = true
+            waitingForTimerUpdate = true
             viewModel.fetchK3GameHistory()
+        }
+    }
+
+    // When new data arrives after timer, animate for 300ms, then update dice and stop animation
+    LaunchedEffect(gameHistoryResource) {
+        if (waitingForTimerUpdate && gameHistoryResource is Resource.Success) {
             kotlinx.coroutines.delay(300)
             updateDiceFromHistory()
             isRolling = false
+            waitingForTimerUpdate = false
         }
     }
 
@@ -347,7 +357,7 @@ fun K3Ui30(
 
     LaunchedEffect(showSuccessMessage) {
         if (showSuccessMessage) {
-            delay(400)
+            delay(300)
             showSuccessMessage = false
         }
     }
