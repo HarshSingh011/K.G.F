@@ -72,13 +72,13 @@ import com.weblite.kgf.ui.screens.KGFLogoText
 import com.weblite.kgf.R
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.weblite.kgf.Api2.Resource
+import com.weblite.kgf.Api.Resource
 import com.weblite.kgf.ui.screens.game.viewmodel.Wingo60GameViewModel
 import kotlinx.coroutines.delay
 import android.util.Log
 import androidx.compose.material3.Button
-import com.weblite.kgf.Api2.MainViewModel
-import com.weblite.kgf.Api2.SharedPrefManager
+import com.weblite.kgf.Api.MainViewModel
+import com.weblite.kgf.Api.SharedPrefManager
 import com.weblite.kgf.data.models.games.BettingGameResultResponse
 
 @OptIn(ExperimentalMaterial3Api::class)

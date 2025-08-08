@@ -34,9 +34,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.weblite.kgf.Api2.MainViewModel
-import com.weblite.kgf.Api2.Resource
-import com.weblite.kgf.Api2.SharedPrefManager
+import com.weblite.kgf.Api.MainViewModel
+import com.weblite.kgf.Api.Resource
+import com.weblite.kgf.Api.SharedPrefManager
 import com.weblite.kgf.ui.components.AttractiveText
 import com.weblite.kgf.ui.components.ON_DEPOSIT
 import com.weblite.kgf.ui.components.ON_DEPO_HIST

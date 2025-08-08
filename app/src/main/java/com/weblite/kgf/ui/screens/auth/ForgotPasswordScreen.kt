@@ -1,4 +1,5 @@
 package com.weblite.kgf.ui.screens.auth
+
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -12,7 +13,6 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,22 +29,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
-import com.weblite.kgf.Api2.MainViewModel
-import com.weblite.kgf.Api2.Resource
-import com.weblite.kgf.Api2.SendOtpResponse
-import com.weblite.kgf.data.CustomFont.Companion.AptosFontNormal
-import com.weblite.kgf.ui.components.AttractiveText
+import com.weblite.kgf.Api.MainViewModel
+import com.weblite.kgf.Api.Resource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.nio.file.WatchEvent

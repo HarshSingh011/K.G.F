@@ -1,6 +1,6 @@
 package com.weblite.kgf.PreviewInterface
 
-import com.weblite.kgf.Api2.Resource
+import com.weblite.kgf.Api.Resource
 import com.weblite.kgf.data.models.games.TigerGameHistoryResponse
 import com.weblite.kgf.data.models.games.TigerPeriodIdResponse
 import kotlinx.coroutines.flow.SharedFlow

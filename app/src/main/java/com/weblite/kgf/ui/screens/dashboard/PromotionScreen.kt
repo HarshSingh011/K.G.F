@@ -48,9 +48,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.weblite.kgf.Api2.MainViewModel
-import com.weblite.kgf.Api2.Resource
-import com.weblite.kgf.Api2.SharedPrefManager
+import com.weblite.kgf.Api.Resource
+import com.weblite.kgf.Api.SharedPrefManager
 import com.weblite.kgf.navigation.COMMISS_DETAILS
 import com.weblite.kgf.navigation.DIRECT_TEAM
 import com.weblite.kgf.navigation.INVITAION_RULES
@@ -58,7 +57,7 @@ import com.weblite.kgf.ui.components.AttractiveText
 
 import com.weblite.kgf.navigation.PromotionNavHost
 import com.weblite.kgf.navigation.REBATE_RATIO
-import com.weblite.kgf.ui.viewmodel.PromotionViewModel
+import com.weblite.kgf.ui.screens.dashboard.viewmodel.PromotionViewModel
 
 // Navigation constants moved to PromotionNavHost.kt
 @Composable
@@ -642,11 +641,11 @@ fun PromotionDataCard(
     var totalCommission by remember { mutableStateOf("0.0000") }
 
     LaunchedEffect(Unit) {
-        val userId = com.weblite.kgf.Api2.SharedPrefManager.getString("user_id", "0") ?: "0"
+        val userId = SharedPrefManager.getString("user_id", "0") ?: "0"
         viewModel.fetchPromotionView(userId)
     }
     LaunchedEffect(promotionViewState) {
-        if (promotionViewState is com.weblite.kgf.Api2.Resource.Success) {
+        if (promotionViewState is Resource.Success) {
             promotionViewState.data?.result?.let { result ->
                 totalCommission = result.totalCommission
                 totalDirectTeamValue = result.rowCount

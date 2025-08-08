@@ -2,7 +2,7 @@ package com.weblite.kgf.ui.screens.game.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
-import com.weblite.kgf.Api2.SharedPrefManager
+import com.weblite.kgf.Api.SharedPrefManager
 import com.weblite.kgf.data.repository.GameRespsitories.K330GameRepository
 import com.weblite.kgf.data.GameBetK360
 import dagger.hilt.android.lifecycle.HiltViewModel

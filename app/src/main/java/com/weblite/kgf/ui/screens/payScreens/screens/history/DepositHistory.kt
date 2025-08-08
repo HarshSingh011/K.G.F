@@ -47,7 +47,7 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.weblite.kgf.R
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.weblite.kgf.ui.screens.payScreens.history.DepositHistoryViewModel
-import com.weblite.kgf.Api2.SharedPrefManager
+import com.weblite.kgf.Api.SharedPrefManager
 
 @Composable
 fun DepositHistory(

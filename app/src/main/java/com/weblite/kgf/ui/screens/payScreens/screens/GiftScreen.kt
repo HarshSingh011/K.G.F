@@ -1,3 +1,5 @@
+package com.weblite.kgf.ui.screens.payScreens
+
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement

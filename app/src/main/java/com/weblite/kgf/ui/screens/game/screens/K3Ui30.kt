@@ -70,9 +70,11 @@ import com.weblite.kgf.R
 import com.weblite.kgf.ui.screens.KGFLogoText
 import com.weblite.kgf.ui.screens.game.viewmodel.K330GameViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.weblite.kgf.Api2.Resource
+import com.weblite.kgf.Api.Resource
 import com.example.weblite.components.CompactExcelTableforK3
 import com.example.weblite.components.MyHistoryTableforK3
+import com.weblite.kgf.Api.MainViewModel
+import com.weblite.kgf.Api.SharedPrefManager
 import com.weblite.kgf.data.models.games.K3PopupHistoryResponse
 import com.weblite.kgf.ui.components.K330BettingPopupDialog
 import com.weblite.kgf.ui.components.PaginationState
@@ -117,9 +119,9 @@ fun K3Ui30(
     var winDialogData by remember { mutableStateOf<K3PopupHistoryResponse?>(null) }
     val popupHistoryResponse by viewModel.popupHistoryResponse.collectAsStateWithLifecycle()
 
-    val mainViewModel: com.weblite.kgf.Api2.MainViewModel = hiltViewModel()
+    val mainViewModel: MainViewModel = hiltViewModel()
     val dashboardState = mainViewModel.dashboardState.value
-    val userId = com.weblite.kgf.Api2.SharedPrefManager.getString("user_id", "0")
+    val userId = SharedPrefManager.getString("user_id", "0")
 
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -317,7 +319,7 @@ fun K3Ui30(
     }
 
     LaunchedEffect(dashboardState) {
-        val successState = dashboardState as? com.weblite.kgf.Api2.Resource.Success<*>
+        val successState = dashboardState as? Resource.Success<*>
         val data = successState?.data
         val validBalance = try {
             val resultField = data?.javaClass?.getDeclaredField("result")

@@ -75,9 +75,9 @@ import com.example.weblite.components.ImageNumberButton
 import com.example.weblite.components.MultiplierButton
 import com.example.weblite.components.MyHistoryTableforWingo
 import com.example.weblite.components.SuccessMessage
-import com.weblite.kgf.Api2.MainViewModel
-import com.weblite.kgf.Api2.PeriodIdUIEvent
-import com.weblite.kgf.Api2.Resource
+import com.weblite.kgf.Api.MainViewModel
+import com.weblite.kgf.Api.PeriodIdUIEvent
+import com.weblite.kgf.Api.Resource
 import kotlin.collections.forEach
 import com.weblite.kgf.R
 import com.weblite.kgf.data.models.games.BettingGameResultResponse
@@ -137,7 +137,7 @@ fun Wingo30Screen(
     mainViewModel: MainViewModel = hiltViewModel()
 ) {
     val dashboardState = mainViewModel.dashboardState.value
-    val userId = com.weblite.kgf.Api2.SharedPrefManager.getString("user_id", "0")
+    val userId = com.weblite.kgf.Api.SharedPrefManager.getString("user_id", "0")
     var totalBalance by remember { mutableStateOf(0.0) }
     var balanceString by remember { mutableStateOf("0.00") }
     var lastGoodBalanceString by remember { mutableStateOf("0.00") }

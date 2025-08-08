@@ -15,7 +15,7 @@ import androidx.compose.runtime.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.weblite.kgf.presentation.support.SupportViewModel
 import com.weblite.kgf.domain.model.SupportMessage
-import com.weblite.kgf.Api2.SharedPrefManager
+import com.weblite.kgf.Api.SharedPrefManager
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color

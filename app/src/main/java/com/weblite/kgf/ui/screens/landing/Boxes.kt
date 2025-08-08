@@ -37,9 +37,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.weblite.kgf.Api2.MainViewModel
-import com.weblite.kgf.Api2.Resource
-import com.weblite.kgf.Api2.SharedPrefManager
+import com.weblite.kgf.Api.MainViewModel
+import com.weblite.kgf.Api.Resource
+import com.weblite.kgf.Api.SharedPrefManager
 import com.weblite.kgf.data.User
 import com.weblite.kgf.data.dummyUsers
 import com.weblite.kgf.ui.screens.MainScreen

@@ -25,13 +25,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.weblite.kgf.ui.screens.payScreens.DepositViewModel
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
 import com.weblite.kgf.R
-import com.weblite.kgf.navigation.AppRoutes.PAYMENT_DEPOSIT
 
 @Composable
 fun DepositScreen(

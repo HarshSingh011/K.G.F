@@ -1,23 +1,24 @@
-package com.weblite.kgf.ui.viewmodel
+package com.weblite.kgf.ui.screens.dashboard.viewmodel
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.weblite.kgf.domain.model.PromotionCommissionDateDetailsResponse
+import com.weblite.kgf.Api.Resource
 import com.weblite.kgf.data.repository.PromotionRepository
-import com.weblite.kgf.Api2.Resource
-import com.weblite.kgf.domain.model.MyCommissionsResponse
 import com.weblite.kgf.domain.model.DirectTeamDataResponse
+import com.weblite.kgf.domain.model.MyCommissionsResponse
+import com.weblite.kgf.domain.model.PromotionCommissionDateDetailsResponse
+import com.weblite.kgf.domain.model.PromotionViewResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.weblite.kgf.domain.model.PromotionViewResponse
 
 @HiltViewModel
 class PromotionViewModel @Inject constructor(
     private val repository: PromotionRepository
 ) : ViewModel() {
-    var commissionDateDetailsState = mutableStateOf<Resource<PromotionCommissionDateDetailsResponse>?>(null)
+    var commissionDateDetailsState =
+        mutableStateOf<Resource<PromotionCommissionDateDetailsResponse>?>(null)
         private set
 
     var commissionsState = mutableStateOf<Resource<MyCommissionsResponse>?>(null)

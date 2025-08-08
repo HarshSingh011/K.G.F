@@ -2,15 +2,13 @@ package com.weblite.kgf.presentation.vip
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.weblite.kgf.domain.model.VipInfo
 import com.weblite.kgf.domain.repository.VipRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.weblite.kgf.presentation.vip.VipUiState
-import com.weblite.kgf.Api2.SharedPrefManager
+import com.weblite.kgf.Api.SharedPrefManager
 import com.weblite.kgf.domain.model.RewardHistory
 
 @HiltViewModel

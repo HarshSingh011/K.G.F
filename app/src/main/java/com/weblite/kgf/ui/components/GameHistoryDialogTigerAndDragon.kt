@@ -28,7 +28,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import com.weblite.kgf.Api2.Resource
+import com.weblite.kgf.Api.Resource
 import com.weblite.kgf.data.models.games.MyHistoryApiResponse
 import com.weblite.kgf.data.models.games.TigerGameHistoryResponse
 

@@ -1,9 +1,5 @@
-
-
 package com.weblite.kgf.ui.navigation
 
-import GiftHistoryItem
-import GiftScreen
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
@@ -20,6 +16,8 @@ import com.weblite.kgf.ui.screens.dashboard.ProfileMainContent
 import com.weblite.kgf.ui.components.*
 import android.app.Activity
 import com.weblite.kgf.ui.screens.internalScreens.Service24O7Screen
+import com.weblite.kgf.ui.screens.payScreens.GiftHistoryItem
+import com.weblite.kgf.ui.screens.payScreens.GiftScreen
 
 const val SERVICE_24_7_ROUTE = "service_24_7"
 

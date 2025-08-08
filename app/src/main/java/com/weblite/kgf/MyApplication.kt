@@ -1,7 +1,7 @@
 package com.weblite.kgf
 
 import android.app.Application
-import com.weblite.kgf.Api2.SharedPrefManager
+import com.weblite.kgf.Api.SharedPrefManager
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp

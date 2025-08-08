@@ -1,4 +1,4 @@
-package com.weblite.kgf.Api2
+package com.weblite.kgf.data.models.auth
 
 import com.google.gson.annotations.SerializedName
 

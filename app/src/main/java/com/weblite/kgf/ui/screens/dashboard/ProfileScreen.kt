@@ -1,7 +1,6 @@
 package com.weblite.kgf.ui.screens.dashboard
 
-import GiftHistoryItem
-import GiftScreen
+
 import android.R.attr.alpha
 import android.app.Activity
 import android.util.Log
@@ -93,9 +92,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.weblite.kgf.Api2.MainViewModel
-import com.weblite.kgf.Api2.Resource
-import com.weblite.kgf.Api2.SharedPrefManager
+import com.weblite.kgf.Api.MainViewModel
+import com.weblite.kgf.Api.SharedPrefManager
 import com.weblite.kgf.ui.navigation.ProfileNavHost
 import com.weblite.kgf.ui.navigation.SERVICE_24_7_ROUTE
 import com.weblite.kgf.ui.screens.payScreens.WithdrawScreen

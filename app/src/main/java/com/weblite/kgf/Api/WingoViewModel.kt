@@ -1,8 +1,11 @@
-package com.weblite.kgf.Api2
+package com.weblite.kgf.Api
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.weblite.kgf.data.PeriodIdResponse
+import com.weblite.kgf.data.models.auth.BetResponse
+import com.weblite.kgf.data.models.auth.GameHistoryResponse
+import com.weblite.kgf.data.models.auth.MyHistoryResponse
 import com.weblite.kgf.data.repository.AuthRepositories.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -184,7 +187,3 @@ class WingoViewModel @Inject constructor(
     }
 }
 
-sealed class PeriodIdUIEvent {
-    data class Success(val response: PeriodIdResponse) : PeriodIdUIEvent()
-    data class Failure(val msg: String) : PeriodIdUIEvent()
-}

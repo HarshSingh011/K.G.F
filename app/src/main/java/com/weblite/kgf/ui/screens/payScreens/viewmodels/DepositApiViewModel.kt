@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.weblite.kgf.data.models.payments.DepositRequest
 import com.weblite.kgf.data.models.payments.DepositResponse
 import com.weblite.kgf.data.repository.PaymentRespositories.UpiQrRepository
-import com.weblite.kgf.Api2.SharedPrefManager
+import com.weblite.kgf.Api.SharedPrefManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

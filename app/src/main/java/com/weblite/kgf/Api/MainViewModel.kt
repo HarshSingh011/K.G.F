@@ -1,4 +1,4 @@
-package com.weblite.kgf.Api2
+package com.weblite.kgf.Api
 
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
@@ -8,6 +8,15 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import androidx.compose.runtime.State
+import com.weblite.kgf.data.models.auth.CommissionResponse
+import com.weblite.kgf.data.models.auth.DashboardResponse
+import com.weblite.kgf.data.models.auth.LoginResponse
+import com.weblite.kgf.data.models.auth.ProfileResponse
+import com.weblite.kgf.data.models.auth.PromotionViewResponse
+import com.weblite.kgf.data.models.auth.SendOtpResponse
+import com.weblite.kgf.data.models.auth.SignupResponse
+import com.weblite.kgf.data.models.auth.UpdatePasswordResponse
+import com.weblite.kgf.data.models.auth.VerifyOtpResponse
 import com.weblite.kgf.data.repository.AuthRepositories.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,7 +45,7 @@ class MainViewModel @Inject constructor(
                     response.body()?.let {
                         Log.d("LOGIN_RESPONSE", "Success: $it")
                         // Save the phone number used in the login POST request
-                        com.weblite.kgf.Api2.SharedPrefManager.setString("PHONE_NUMBER", mobile)
+                        SharedPrefManager.setString("PHONE_NUMBER", mobile)
                         loginState.value = Resource.Success(it)
                     } ?: run {
                         loginState.value = Resource.Error("Empty response")

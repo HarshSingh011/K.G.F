@@ -34,7 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.weblite.kgf.ui.screens.game.viewmodel.TigerAndDragonViewModel
 import com.weblite.kgf.data.models.games.TigerGameHistoryResponse
-import com.weblite.kgf.Api2.Resource
+import com.weblite.kgf.Api.Resource
 import com.weblite.kgf.PreviewInterface.ITigerAndDragonViewModel
 import com.weblite.kgf.data.models.games.MyHistoryApiResponse
 import com.weblite.kgf.data.models.games.TigerGameHistoryResult

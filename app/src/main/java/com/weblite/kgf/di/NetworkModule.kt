@@ -1,10 +1,9 @@
-// File: com.weblite.kgf.di.NetworkModule.kt
 package com.weblite.kgf.di
 
 
 import com.weblite.kgf.Api.PaymentApiService
 import com.weblite.kgf.Api.TigerAndDragonApiService
-import com.weblite.kgf.Api2.ApiService
+import com.weblite.kgf.Api.ApiService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

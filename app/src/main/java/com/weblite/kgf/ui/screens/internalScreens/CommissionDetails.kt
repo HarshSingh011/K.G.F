@@ -38,11 +38,12 @@ import androidx.navigation.NavController
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.weblite.kgf.Api2.Resource
+import com.weblite.kgf.Api.Resource
+import com.weblite.kgf.Api.SharedPrefManager
 import com.weblite.kgf.domain.model.MyCommissionsResponse
 import com.weblite.kgf.domain.model.MyCommission
 import com.weblite.kgf.util.DateFormatUtil
-import com.weblite.kgf.ui.viewmodel.PromotionViewModel
+import com.weblite.kgf.ui.screens.dashboard.viewmodel.PromotionViewModel
 
 
 @Composable
@@ -61,7 +62,7 @@ fun CommissionDetails(
     LaunchedEffect(Unit) {
         onShowTopBar(true)
         onShowBottomBar(false)
-        val userId = com.weblite.kgf.Api2.SharedPrefManager.getString("user_id", "0") ?: "0"
+        val userId = SharedPrefManager.getString("user_id", "0") ?: "0"
         viewModel.fetchMyCommissions(userId)
     }
 

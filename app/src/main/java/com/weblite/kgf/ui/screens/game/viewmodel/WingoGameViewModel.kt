@@ -13,11 +13,11 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.weblite.kgf.data.repository.AuthRepositories.UserRepository
-import com.weblite.kgf.Api2.Resource
-import com.weblite.kgf.Api2.PeriodIdUIEvent
-import com.weblite.kgf.Api2.SharedPrefManager
-import com.weblite.kgf.Api2.GameHistoryResponse
-import com.weblite.kgf.Api2.MyHistoryResponse
+import com.weblite.kgf.Api.Resource
+import com.weblite.kgf.Api.PeriodIdUIEvent
+import com.weblite.kgf.Api.SharedPrefManager
+import com.weblite.kgf.data.models.auth.GameHistoryResponse
+import com.weblite.kgf.data.models.auth.MyHistoryResponse
 import com.weblite.kgf.data.models.games.BettingGameResultResponse
 import javax.inject.Inject
 

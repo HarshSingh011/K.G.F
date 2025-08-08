@@ -20,8 +20,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.weblite.kgf.ui.viewmodel.PromotionViewModel
-import com.weblite.kgf.Api2.Resource
+import com.weblite.kgf.ui.screens.dashboard.viewmodel.PromotionViewModel
+import com.weblite.kgf.Api.Resource
 import com.weblite.kgf.util.DateFormatUtil
 
 @Composable
@@ -30,7 +30,7 @@ fun DateDetailsScreen(
     viewModel: PromotionViewModel = hiltViewModel()
 ) {
     val commissionDetailsState = viewModel.commissionDateDetailsState.value
-    val userId = com.weblite.kgf.Api2.SharedPrefManager.getString("user_id", "0") ?: "0"
+    val userId = com.weblite.kgf.Api.SharedPrefManager.getString("user_id", "0") ?: "0"
 
     val apiDate = DateFormatUtil.formatDisplayDateToApi(date)
 

@@ -59,9 +59,9 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.TextField
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.weblite.kgf.Api2.MainViewModel
-import com.weblite.kgf.Api2.Resource
-import com.weblite.kgf.Api2.SharedPrefManager
+import com.weblite.kgf.Api.MainViewModel
+import com.weblite.kgf.Api.Resource
+import com.weblite.kgf.Api.SharedPrefManager
 import com.weblite.kgf.ui.screens.auth.ChangePasswordDialog
 import kotlinx.coroutines.launch
 

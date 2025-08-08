@@ -5,14 +5,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import com.weblite.kgf.ui.screens.game.screens.K3Ui30
 import com.weblite.kgf.ui.screens.game.screens.K3Ui60
 import com.weblite.kgf.ui.screens.game.screens.TigerAndDragonGameScreen
 import com.weblite.kgf.ui.screens.game.screens.Wingo30Screen
 import com.weblite.kgf.ui.screens.game.screens.Wingo60Screen
 import com.weblite.kgf.ui.screens.dashboard.HomeMainConten
-import com.weblite.kgf.Api2.MainViewModel
 import com.weblite.kgf.ui.screens.payScreens.PaymentDepositScreen
 
 @Composable

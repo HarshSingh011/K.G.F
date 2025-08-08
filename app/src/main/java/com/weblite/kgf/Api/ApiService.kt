@@ -1,4 +1,4 @@
-package com.weblite.kgf.Api2
+package com.weblite.kgf.Api
 
 import com.weblite.kgf.data.GameBetK360
 import com.weblite.kgf.data.GameK360BettingResponse
@@ -8,6 +8,22 @@ import com.weblite.kgf.data.PeriodIdResponse
 import com.weblite.kgf.data.K360GameHistoryResponse
 import com.weblite.kgf.data.K360MyHistoryResponse
 import com.weblite.kgf.data.K360PeriodIdResponse
+import com.weblite.kgf.data.models.auth.BetRequest
+import com.weblite.kgf.data.models.auth.BetResponse
+import com.weblite.kgf.data.models.auth.DashboardResponse
+import com.weblite.kgf.data.models.auth.GameHistoryResponse
+import com.weblite.kgf.data.models.auth.LoginRequest
+import com.weblite.kgf.data.models.auth.LoginResponse
+import com.weblite.kgf.data.models.auth.MyHistoryResponse
+import com.weblite.kgf.data.models.auth.ProfileResponseWrapper
+import com.weblite.kgf.data.models.auth.PromotionViewResponse
+import com.weblite.kgf.data.models.auth.SendOtpRequest
+import com.weblite.kgf.data.models.auth.SendOtpResponse
+import com.weblite.kgf.data.models.auth.SignupRequest
+import com.weblite.kgf.data.models.auth.SignupResponse
+import com.weblite.kgf.data.models.auth.UpdatePasswordResponse
+import com.weblite.kgf.data.models.auth.VerifyOtpRequest
+import com.weblite.kgf.data.models.auth.VerifyOtpResponse
 import com.weblite.kgf.data.models.games.K3PopupHistoryResponse
 import com.weblite.kgf.data.models.games.Game60SecBettingResponse
 import com.weblite.kgf.data.models.games.GameBet60Sec

@@ -1,4 +1,4 @@
-package com.weblite.kgf.Api2
+package com.weblite.kgf.Api
 
 import android.content.Context
 import android.content.SharedPreferences

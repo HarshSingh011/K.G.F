@@ -63,7 +63,9 @@ import com.weblite.kgf.R
 import com.weblite.kgf.ui.screens.KGFLogoText
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.weblite.kgf.Api2.Resource
+import com.weblite.kgf.Api.MainViewModel
+import com.weblite.kgf.Api.Resource
+import com.weblite.kgf.Api.SharedPrefManager
 import com.weblite.kgf.data.K360GameHistoryItem
 import com.weblite.kgf.data.K360MyHistoryItem
 import com.weblite.kgf.data.models.games.K3PopupHistoryResponse
@@ -186,9 +188,9 @@ fun K3Ui60(
     var showWinDialog by remember { mutableStateOf(false) }
     var winDialogData by remember { mutableStateOf<K3PopupHistoryResponse?>(null) }
     val popupHistoryResponse by viewModel.popupHistoryResponse.collectAsStateWithLifecycle()
-    val mainViewModel: com.weblite.kgf.Api2.MainViewModel = hiltViewModel()
+    val mainViewModel: MainViewModel = hiltViewModel()
     val dashboardState = mainViewModel.dashboardState.value
-    val userId = com.weblite.kgf.Api2.SharedPrefManager.getString("user_id", "0")
+    val userId = SharedPrefManager.getString("user_id", "0")
     var lastTimeRemaining by remember { mutableStateOf(0L) }
     val showCountdownOverlay = timeRemaining <= 10000L && timeRemaining > 0L
 
@@ -275,7 +277,7 @@ fun K3Ui60(
     }
 
     LaunchedEffect(dashboardState) {
-        val successState = dashboardState as? com.weblite.kgf.Api2.Resource.Success<*>
+        val successState = dashboardState as? Resource.Success<*>
         val data = successState?.data
         val validBalance = try {
             val resultField = data?.javaClass?.getDeclaredField("result")

@@ -38,8 +38,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.weblite.kgf.Api2.Resource
-import com.weblite.kgf.ui.viewmodel.PromotionViewModel
+import com.weblite.kgf.Api.Resource
+import com.weblite.kgf.ui.screens.dashboard.viewmodel.PromotionViewModel
 import com.weblite.kgf.domain.model.DirectTeamDataResponse
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +58,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.weblite.kgf.Api.SharedPrefManager
 
 
 @Composable
@@ -107,7 +108,7 @@ fun DirectTeamData(
             date
         }
     }
-    val userId = com.weblite.kgf.Api2.SharedPrefManager.getString("user_id", "0") ?: "0"
+    val userId = SharedPrefManager.getString("user_id", "0") ?: "0"
     LaunchedEffect(Unit) {
         onShowTopBar(true)
         onShowBottomBar(false)

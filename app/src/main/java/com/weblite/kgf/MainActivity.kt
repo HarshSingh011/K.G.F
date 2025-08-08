@@ -7,7 +7,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -16,12 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mohit.kgfindia.ui.ContentScreen
-import com.weblite.kgf.Api2.MainViewModel
-import com.weblite.kgf.Api2.SharedPrefManager
+import com.weblite.kgf.Api.MainViewModel
+import com.weblite.kgf.Api.SharedPrefManager
 import com.weblite.kgf.ui.screens.MainScreen
-import com.weblite.kgf.ui.screens.auth.AuthFlowScreen
-import com.weblite.kgf.ui.screens.auth.ForgotPasswordScreen
-//import com.weblite.kgf.ui.screens.auth.AuthScreen
 import com.weblite.kgf.ui.theme.KGFTheme
 import dagger.hilt.android.AndroidEntryPoint
 
