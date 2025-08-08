@@ -124,7 +124,7 @@ fun LandingScreen(onLoginSuccess: () -> Unit) {
             val bannerVisible by remember { derivedStateOf { scrollState.firstVisibleItemIndex == 0 } }
 
             if (bannerVisible) {
-                BannerSection(listOf(R.drawable.google_pay, R.drawable.gpay, R.drawable.paytm))
+                BannerSection(listOf(R.drawable.slider_1, R.drawable.slider_2, R.drawable.slider_3))
             }
 
             TabSection(selectedTabIndex) { index ->
