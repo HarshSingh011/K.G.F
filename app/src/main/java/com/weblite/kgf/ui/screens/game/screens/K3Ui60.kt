@@ -38,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontWeight.Companion.Bold
@@ -62,6 +64,8 @@ import com.example.weblite.components.SuccessMessage
 import com.weblite.kgf.R
 import com.weblite.kgf.ui.screens.KGFLogoText
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.weblite.kgf.Api.MainViewModel
 import com.weblite.kgf.Api.Resource
@@ -191,8 +195,25 @@ fun K3Ui60(
     val mainViewModel: MainViewModel = hiltViewModel()
     val dashboardState = mainViewModel.dashboardState.value
     val userId = SharedPrefManager.getString("user_id", "0")
+    val lifecycleOwner = LocalLifecycleOwner.current
     var lastTimeRemaining by remember { mutableStateOf(0L) }
     val showCountdownOverlay = timeRemaining <= 10000L && timeRemaining > 0L
+
+    // Handle app lifecycle to refresh data when returning from background
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // Refresh all data when app resumes from background
+                mainViewModel.fetchDashboard(userId)
+                viewModel.fetchK3GameHistory()
+                viewModel.fetchK3MyHistory()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     val k3Balls = listOf(
         K3Ball(3, "207.36X", Color(0xFFE53935)),

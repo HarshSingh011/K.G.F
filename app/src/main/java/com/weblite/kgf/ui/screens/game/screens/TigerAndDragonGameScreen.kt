@@ -30,8 +30,11 @@ import android.util.Log
 import androidx.compose.material3.Text
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.weblite.kgf.ui.screens.game.viewmodel.TigerAndDragonViewModel
 import com.weblite.kgf.data.models.games.TigerGameHistoryResponse
 import com.weblite.kgf.Api.Resource
@@ -82,6 +85,7 @@ fun TigerAndDragonGameScreen(
     var dragonAllCoins by remember { mutableStateOf(listOf<Int>()) }
     var tigerAllCoins by remember { mutableStateOf(listOf<Int>()) }
     var tieAllCoins by remember { mutableStateOf(listOf<Int>()) }
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     // Define chipValues here so it's available for addCoinToSection
     val chipValues = listOf(10, 50, 500, 1000, 5000)
@@ -90,6 +94,22 @@ fun TigerAndDragonGameScreen(
     var showBetPlacedPopup by remember { mutableStateOf(false) }
     var betPlacedText by remember { mutableStateOf("") }
     var betPlacedPopupKey by remember { mutableStateOf(0) }
+
+    // Handle app lifecycle to refresh data when returning from background
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // Refresh data when app resumes from background
+                viewModel.fetchPeriodId()
+                viewModel.fetchGameHistory()
+                viewModel.fetchMyHistory()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     // Helper to add coin to a section and call bet API immediately
     fun addCoinToSection(section: String) {

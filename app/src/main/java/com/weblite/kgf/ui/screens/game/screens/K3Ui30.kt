@@ -42,6 +42,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +57,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontWeight.Companion.Bold
@@ -64,6 +66,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.example.weblite.components.HistoryTabButton
 import com.example.weblite.components.SuccessMessage
 import com.weblite.kgf.R
@@ -122,9 +126,26 @@ fun K3Ui30(
     val mainViewModel: MainViewModel = hiltViewModel()
     val dashboardState = mainViewModel.dashboardState.value
     val userId = SharedPrefManager.getString("user_id", "0")
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    // Handle app lifecycle to refresh data when returning from background
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // Refresh all data when app resumes from background
+                mainViewModel.fetchDashboard(userId)
+                viewModel.fetchK3GameHistory()
+                viewModel.fetchK3MyHistory()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
 
 

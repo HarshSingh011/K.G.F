@@ -41,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +49,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -124,10 +128,28 @@ fun Wingo60Screen(
     var showWinDialog by remember { mutableStateOf(false) }
     var winDialogData by remember { mutableStateOf<BettingGameResultResponse?>(null) }
     val popupHistoryResponse by viewModel.popupHistoryResponse.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     // Fetch dashboard data when screen is first composed
     LaunchedEffect(Unit) {
         mainViewModel.fetchDashboard(userId)
+    }
+
+    // Handle app lifecycle to refresh data when returning from background
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // Refresh all data when app resumes from background
+                mainViewModel.fetchDashboard(userId)
+                viewModel.fetchPeriodIdAndStartTimer()
+                viewModel.fetchGameHistory()
+                viewModel.fetchMyHistory()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     LaunchedEffect(dashboardState) {
