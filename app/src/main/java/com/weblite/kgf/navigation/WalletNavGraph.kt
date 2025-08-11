@@ -91,6 +91,7 @@ fun WalletNavGraph(
             val amount = backStackEntry.arguments?.getString("amount") ?: "0"
             PaymentDepositScreen(
                 amount = "₹ $amount",
+                navController = localNavController,
                 onBackClick = { localNavController.popBackStack() }
             )
         }

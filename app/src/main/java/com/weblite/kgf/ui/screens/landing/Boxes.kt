@@ -1,6 +1,8 @@
 package com.weblite.kgf.ui.screens.landing
 
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -214,18 +217,24 @@ fun LoginSection(
     onLoginClick: () -> Unit,
     errorMessage: String?
 ) {
-    val yellow = Color(0xFFDEAF56)
+    val yellow = Color(0xFFFFC700)
+    val background = Color(0xFF3f0110)
     var checkedState by remember { mutableStateOf(false) }
 
-    Column {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(background, RoundedCornerShape(16.dp))
+    ) {
         CustomInputField(
             value = phone,
             onValueChange = onPhoneChange,
-            label = "Phone",
+            label = "",
             placeholder = "Enter your phone number",
             leadingIcon = Icons.Default.Phone,
             yellow = yellow,
-            errorMessage = errorMessage
+            errorMessage = errorMessage,
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -233,29 +242,44 @@ fun LoginSection(
         CustomInputField(
             value = password,
             onValueChange = onPasswordChange,
-            label = "Password",
+            label = "",
             placeholder = "Enter your password",
             leadingIcon = Icons.Default.Lock,
             isPassword = true,
-            yellow = yellow
+            yellow = yellow,
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = checkedState, onCheckedChange = { checkedState = it })
-            Text("I'm over 18 years old and agree to the terms", fontSize = 14.sp)
+            Checkbox(
+                checked = checkedState,
+                onCheckedChange = { checkedState = it },
+                colors = CheckboxDefaults.colors(
+                    checkedColor = yellow,
+                    uncheckedColor = Color.White,
+                    checkmarkColor = background
+                )
+            )
+            Text("I'm over 18 years old and agree to the terms", fontSize = 14.sp, color = Color.White)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = onLoginClick,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = yellow),
-            enabled = checkedState && phone.isNotBlank() && password.isNotBlank()
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = yellow,
+                contentColor = Color.White,
+                disabledContainerColor = yellow.copy(alpha = 0.5f),
+                disabledContentColor = Color.White.copy(alpha = 0.5f)
+            ),
+            enabled = checkedState && phone.isNotBlank() && password.isNotBlank(),
+            shape = RoundedCornerShape(8.dp)
         ) {
-            Text("Login", color = Color.White)
+            Text("LOGIN", color = Color.White, fontSize = 20.sp)
         }
     }
 }
@@ -275,80 +299,165 @@ fun RegisterSection(
     onRegisterClick: () -> Unit,
     errorMessage: String?
 ) {
-    val yellow = Color(0xFFDEAF56)
+    val yellow = Color(0xFFFFC700)
+    val borderColor = Color(0xFFDEAF56)
+    val background = Color(0xFF3f0110)
 
-    Column {
-        CustomInputField(
-            value = phone,
-            onValueChange = onPhoneChange,
-            label = "Phone",
-            placeholder = "Enter your phone number",
-            leadingIcon = Icons.Default.Phone,
-            yellow = yellow
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        CustomInputField(
-            value = password,
-            onValueChange = onPasswordChange,
-            label = "Password",
-            placeholder = "Enter your password",
-            leadingIcon = Icons.Default.Lock,
-            isPassword = true,
-            yellow = yellow
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        CustomInputField(
-            value = confirmPassword,
-            onValueChange = onConfirmPasswordChange,
-            label = "Confirm Password",
-            placeholder = "Re-enter your password",
-            leadingIcon = Icons.Default.Lock,
-            isPassword = true,
-            yellow = yellow
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        CustomInputField(
-            value = referralCode,
-            onValueChange = onReferralChange,
-            label = "Referral Code (Optional)",
-            placeholder = "Enter referral code",
-            leadingIcon = Icons.Default.CardGiftcard,
-            yellow = yellow
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = agreeToTerms, onCheckedChange = onAgreeChange)
-            Text("I'm over 18 years old and agree to the terms", fontSize = 12.sp)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(0.dp)
+            .background(background)
+    ) {
+        // Input fields with border
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(background, RoundedCornerShape(16.dp))
+        ) {
+            CustomInputField(
+                value = phone,
+                onValueChange = onPhoneChange,
+                label = "",
+                placeholder = "Enter your phone number",
+                leadingIcon = Icons.Default.Phone,
+                yellow = yellow,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            CustomInputField(
+                value = password,
+                onValueChange = onPasswordChange,
+                label = "",
+                placeholder = "Enter your password",
+                leadingIcon = Icons.Default.Lock,
+                isPassword = true,
+                yellow = yellow,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            CustomInputField(
+                value = confirmPassword,
+                onValueChange = onConfirmPasswordChange,
+                label = "",
+                placeholder = "Enter your confirm password",
+                leadingIcon = Icons.Default.Lock,
+                isPassword = true,
+                yellow = yellow,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            CustomInputField(
+                value = referralCode,
+                onValueChange = onReferralChange,
+                label = "",
+                placeholder = "Enter your referral code (optional)",
+                leadingIcon = Icons.Default.CardGiftcard,
+                yellow = yellow,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
+        // Terms and Conditions (multi-line, aligned)
+        Row(
+            verticalAlignment = Alignment.Top,
+            modifier = Modifier.padding(start = 8.dp, end = 8.dp)
+        ) {
+            Checkbox(
+                checked = agreeToTerms,
+                onCheckedChange = onAgreeChange,
+                colors = CheckboxDefaults.colors(
+                    checkedColor = yellow,
+                    uncheckedColor = Color.White,
+                    checkmarkColor = background
+                ),
+                modifier = Modifier.align(Alignment.Top)
+            )
+            Spacer(modifier = Modifier.width(2.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = buildString {
+                        append("I agree to the ")
+                    },
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    maxLines = 1
+                )
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Terms & Conditions",
+                        color = yellow,
+                        fontSize = 15.sp,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = " and ",
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = "Privacy Policy",
+                        color = yellow,
+                        fontSize = 15.sp,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        // Register Button
         Button(
             onClick = onRegisterClick,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = yellow),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+                .height(52.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = yellow,
+                contentColor = Color.White,
+                disabledContainerColor = yellow.copy(alpha = 0.5f),
+                disabledContentColor = Color.White.copy(alpha = 0.5f)
+            ),
             enabled = agreeToTerms &&
                     phone.isNotBlank() &&
                     password.isNotBlank() &&
                     confirmPassword.isNotBlank() &&
-                    password == confirmPassword
+                    password == confirmPassword,
+            shape = RoundedCornerShape(8.dp)
         ) {
-            Text("Register", color = Color.White)
+            Text("REGISTER", color = Color.White, fontSize = 20.sp)
         }
     }
 }
+
 @Composable
 @Preview
-fun PreviewAuthDialog() {
-    //AuthDialog(0, onDismiss = {})
-    AuthDialog(index = 1, onDismiss = { true},onLoginSuccess = {
-    })
+fun PreviewRegisterSection() {
+    RegisterSection(
+        phone = "",
+        password = "",
+        confirmPassword = "",
+        referralCode = "",
+        agreeToTerms = false,
+        onPhoneChange = {},
+        onPasswordChange = {},
+        onConfirmPasswordChange = {},
+        onReferralChange = {},
+        onAgreeChange = {},
+        onRegisterClick = {},
+        errorMessage = null
+    )
 }
+
+//@Composable
+//@Preview
+//fun PreviewAuthDialog() {
+//    //AuthDialog(0, onDismiss = {})
+//    AuthDialog(index = 1, onDismiss = { true},onLoginSuccess = {
+//    })
+//}

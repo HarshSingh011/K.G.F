@@ -30,10 +30,13 @@ import androidx.compose.ui.unit.sp
 import com.weblite.kgf.R
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.material3.OutlinedTextField
+import androidx.navigation.NavController
+import com.weblite.kgf.ui.components.ON_DEPO_HIST
 
 @Composable
 fun PaymentDepositScreen(
     amount: String = "₹ 100.00",
+    navController: NavController,
     onBackClick: () -> Unit = {},
     showNoUpi: Boolean = true,
     qrViewModel: QrCodeViewModel = hiltViewModel(),
@@ -50,7 +53,10 @@ fun PaymentDepositScreen(
     LaunchedEffect(depositResponse) {
         if (depositResponse?.status == "success") {
             android.widget.Toast.makeText(context, "Deposit successful!", android.widget.Toast.LENGTH_SHORT).show()
-            onBackClick()
+            navController.navigate(ON_DEPO_HIST) {
+                popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                launchSingleTop = true
+            }
         }
     }
     LaunchedEffect(Unit) {
