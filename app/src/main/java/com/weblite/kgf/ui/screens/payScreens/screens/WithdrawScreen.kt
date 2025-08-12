@@ -119,12 +119,6 @@ fun WithdrawScreen(
     showBankcard = userName.isNotBlank() && accountNumber.isNotBlank()
     showUPIcard = userName.isNotBlank() && upiId.isNotBlank()
 
-
-
-
-
-
-
     LaunchedEffect(Unit) {
         onShowTopBar(false)
         onShowBottomBar(false)

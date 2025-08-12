@@ -30,6 +30,9 @@ class TigerAndDragonViewModel @Inject constructor(
     // --- Win Result State ---
     private val _winResult = MutableStateFlow<String?>(null)
     val winResult: StateFlow<String?> = _winResult
+    
+    private val _showWinResult = MutableStateFlow(false)
+    val showWinResult: StateFlow<Boolean> = _showWinResult
 
     fun fetchWinResult() {
         viewModelScope.launch {
@@ -38,12 +41,23 @@ class TigerAndDragonViewModel @Inject constructor(
                 onSuccess = { response ->
                     val win = response.result?.result
                     _winResult.value = win
+                    if (win != null) {
+                        _showWinResult.value = true
+                        // Auto-hide after 3 seconds
+                        kotlinx.coroutines.delay(3000)
+                        _showWinResult.value = false
+                    }
                 },
                 onFailure = {
                     _winResult.value = null
+                    _showWinResult.value = false
                 }
             )
         }
+    }
+    
+    fun hideWinResult() {
+        _showWinResult.value = false
     }
 
     private val _periodId = MutableSharedFlow<Resource<TigerPeriodIdResponse>>()
@@ -54,6 +68,8 @@ class TigerAndDragonViewModel @Inject constructor(
     private var _currentPeriodValue: String? = null
     val currentPeriodValue: String?
         get() = _currentPeriodValue
+        
+    private var _lastPeriodValue: String? = null
 
     // --- Timer State ---
 
@@ -71,8 +87,13 @@ class TigerAndDragonViewModel @Inject constructor(
     private fun fetchPeriodIdAndSyncTimer() {
         viewModelScope.launch {
             while (true) {
-                fetchPeriodId(syncTimer = true)
-                kotlinx.coroutines.delay(3000) // Poll every 3 seconds for high accuracy
+                try {
+                    fetchPeriodId(syncTimer = true)
+                    kotlinx.coroutines.delay(5000) // Poll every 5 seconds for better performance
+                } catch (e: Exception) {
+                    Log.e("TigerAndDragonVM", "Error in period ID polling: ${e.message}", e)
+                    kotlinx.coroutines.delay(5000) // Continue polling even on error
+                }
             }
         }
     }
@@ -101,13 +122,18 @@ class TigerAndDragonViewModel @Inject constructor(
     private fun onTimerEndActions() {
         // 1. Call bet API for placed coins
         placeAllBets()
-        // 2. Refresh game history and my history
+        
+        // 2. Wait a moment for bets to process, then fetch win result
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(1000) // Wait 1 second for bet processing
+            fetchWinResult()
+        }
+        
+        // 3. Refresh game history and my history
         fetchGameHistory()
         fetchMyHistory()
-        // 3. Fetch win result after timer ends
-        fetchWinResult()
-        // 4. Clear coins in UI (UI should observe timerEnded)
-        // Reset timerEnded after short delay so UI can react
+        
+        // 4. Reset timerEnded after short delay so UI can react
         viewModelScope.launch {
             kotlinx.coroutines.delay(500)
             _timerEnded.value = false
@@ -128,10 +154,20 @@ class TigerAndDragonViewModel @Inject constructor(
                 result.fold(
                     onSuccess = { periodResponse ->
                         _periodId.emit(Resource.Success(periodResponse.copy()))
-                        _currentPeriodValue = periodResponse.result.firstOrNull()?.periodId
-                        Log.d("TigerAndDragonVM", "Period ID fetched successfully: ${periodResponse.result.firstOrNull()?.periodId}")
-                        // Fetch win result after periodId is fetched
-                        fetchWinResult()
+                        val newPeriodId = periodResponse.result.firstOrNull()?.periodId
+                        
+                        // Check if period changed - if so, fetch win result for previous period
+                        if (_currentPeriodValue != null && _lastPeriodValue != null && 
+                            newPeriodId != _currentPeriodValue && newPeriodId != _lastPeriodValue) {
+                            Log.d("TigerAndDragonVM", "Period changed from $_currentPeriodValue to $newPeriodId - fetching win result")
+                            fetchWinResult()
+                        }
+                        
+                        _lastPeriodValue = _currentPeriodValue
+                        _currentPeriodValue = newPeriodId
+                        
+                        Log.d("TigerAndDragonVM", "Period ID fetched successfully: $newPeriodId")
+                        
                         if (syncTimer && periodResponse.result.isNotEmpty()) {
                             val period = periodResponse.result[0]
                             val serverTime = try {
@@ -164,8 +200,19 @@ class TigerAndDragonViewModel @Inject constructor(
                 result.fold(
                     onSuccess = { periodResponse ->
                         _periodId.emit(Resource.Success(periodResponse.copy()))
-                        _currentPeriodValue = periodResponse.result.firstOrNull()?.periodId
-                        Log.d("TigerAndDragonVM", "Period ID fetched successfully: ${periodResponse.result.firstOrNull()?.periodId}")
+                        val newPeriodId = periodResponse.result.firstOrNull()?.periodId
+                        
+                        // Check if period changed - if so, fetch win result for previous period
+                        if (_currentPeriodValue != null && _lastPeriodValue != null && 
+                            newPeriodId != _currentPeriodValue && newPeriodId != _lastPeriodValue) {
+                            Log.d("TigerAndDragonVM", "Period changed from $_currentPeriodValue to $newPeriodId - fetching win result")
+                            fetchWinResult()
+                        }
+                        
+                        _lastPeriodValue = _currentPeriodValue
+                        _currentPeriodValue = newPeriodId
+                        
+                        Log.d("TigerAndDragonVM", "Period ID fetched successfully: $newPeriodId")
                     },
                     onFailure = { error ->
                         _periodId.emit(Resource.Error(error.message ?: "Unknown Error"))

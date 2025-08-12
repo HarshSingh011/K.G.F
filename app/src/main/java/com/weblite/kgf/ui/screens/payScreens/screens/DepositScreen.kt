@@ -233,6 +233,7 @@ fun DepositScreen(
         }
 
         DepositAmountSection(
+            depositViewModel = depositViewModel,
             onDepositClick = { amt ->
                 depositViewModel.setAmount(amt)
                 navController.navigate("payment_deposit/$amt")
@@ -258,10 +259,16 @@ fun Int.toShortAmount(): String {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DepositAmountSection(
+    depositViewModel: DepositViewModel,
     onDepositClick: (Int) -> Unit = {}
 ) {
-    val predefinedAmounts = listOf(10, 50, 1000, 5000, 10000, 20000, 50000, 100000)
-    var customAmount by remember { mutableStateOf("") }
+    val predefinedAmounts = listOf(100, 500, 1000, 5000, 10000, 20000, 50000, 100000)
+    val amount by depositViewModel.amount.collectAsState()
+    var customAmount by remember { mutableStateOf(amount.toString()) }
+    // Keep customAmount in sync with ViewModel's amount
+    LaunchedEffect(amount) {
+        if (customAmount != amount.toString()) customAmount = amount.toString()
+    }
     val isValidAmount = customAmount.toIntOrNull()?.let { it >= 100 } ?: false
     val errorText = if (customAmount.isNotEmpty() && !isValidAmount) {
         "Amount is required and must be 100 or more!"
@@ -292,22 +299,26 @@ fun DepositAmountSection(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            predefinedAmounts.forEach { amount ->
+            predefinedAmounts.forEach { amt ->
                 OutlinedButton(
                     onClick = {
-                        customAmount = amount.toString()
+                        customAmount = amt.toString()
+                        depositViewModel.setAmount(amt)
                     },
                     shape = RoundedCornerShape(22),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = Color(0xFF007BFF)
                     ),
                     border = BorderStroke(1.dp, Color(0xdd007BFF)),
-                    modifier = Modifier.size(width = 85.dp, height = 34.dp)
+                    modifier = Modifier.size(width = 112.dp, height = 40.dp) // wider for 100K
                 ) {
-                    Text("₹${amount.toShortAmount()}",
-                        lineHeight = 18.sp,
-                        fontSize = 17.sp,
-                        )
+                    Text(
+                        text = "₹${amt.toShortAmount()}",
+                        lineHeight = 20.sp,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
                 }
             }
         }
@@ -318,7 +329,11 @@ fun DepositAmountSection(
         OutlinedTextField(
             value = customAmount,
             onValueChange = { input ->
-                if (input.length <= 7) customAmount = input.filter { it.isDigit() }
+                val filtered = input.filter { it.isDigit() }
+                if (filtered.length <= 7) {
+                    customAmount = filtered
+                    filtered.toIntOrNull()?.let { depositViewModel.setAmount(it) }
+                }
             },
             placeholder = { Text("Please enter the amount") },
             modifier = Modifier

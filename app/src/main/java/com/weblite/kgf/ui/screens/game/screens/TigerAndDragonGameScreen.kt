@@ -56,9 +56,9 @@ fun TigerAndDragonGameScreen(
     onShowTopBar: (Boolean) -> Unit,
     onShowBottomBar: (Boolean) -> Unit,
     onBackClick: () -> Unit, // Added new parameter for back
-    viewModel: TigerAndDragonViewModel = hiltViewModel(),
-//    viewModel: ITigerAndDragonViewModel
+    viewModel: TigerAndDragonViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     var showTigerOverlay by remember { mutableStateOf(false) }
     var showPeriodId by remember { mutableStateOf("") }
     var activeTab by remember { mutableStateOf("game-history") } // Track active tab
@@ -71,7 +71,6 @@ fun TigerAndDragonGameScreen(
     var selectedChipIndex by remember { mutableStateOf(-1) }
     var showHistoryDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
     // State for placed coins in each section (visible on UI)
     var dragonCoins by remember { mutableStateOf(listOf<Int>()) }
@@ -163,37 +162,27 @@ fun TigerAndDragonGameScreen(
         }
     }
 
+    // Initial fetch and setup
     LaunchedEffect(Unit) {
         onShowTopBar(false)
         onShowBottomBar(false)
-    }
-
-    DisposableEffect(Unit) {
-        val activity = context as? Activity
-        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        onDispose {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        }
-    }
-
-    // Initial fetch
-    LaunchedEffect(Unit) {
         Log.d("TigerAndDragonGameScreen", "Initial fetch: Period ID and Game History.")
         viewModel.fetchPeriodId()
         viewModel.fetchGameHistory()
     }
 
-    // UI Update for period ID
+    // Handle period ID updates and auto-fetch win results
     LaunchedEffect(Unit) {
         viewModel.periodId.collect { resourceEvent ->
             when (resourceEvent) {
                 is Resource.Success<*> -> {
                     val response = resourceEvent.data
-                    // Only handle TigerPeriodIdResponse, not TigerPeriodIdResult
                     if (response is TigerPeriodIdResponse && response.result != null && response.result.isNotEmpty()) {
                         val datetime = response.result[0].periodId
-                        showPeriodId = datetime
-                        Log.d("TigerAndDragonGameScreen", "Period ID fetched: $datetime")
+                        if (showPeriodId != datetime) {
+                            showPeriodId = datetime
+                            Log.d("TigerAndDragonGameScreen", "Period ID updated: $datetime")
+                        }
                     } else {
                         showPeriodId = "No Period Id Data"
                         Log.w("TigerAndDragonGameScreen", "Period ID response empty, null, or wrong type.")
@@ -204,7 +193,7 @@ fun TigerAndDragonGameScreen(
                     Log.e("TigerAndDragonGameScreen", "Error fetching Period ID: ${resourceEvent.message}")
                 }
                 is Resource.Loading<*> -> {
-                    showPeriodId = "Fetching Period Id..."
+                    if (showPeriodId.isEmpty()) showPeriodId = "Fetching Period Id..."
                     Log.d("TigerAndDragonGameScreen", "Fetching Period ID (Loading state).")
                 }
                 else -> {
@@ -214,20 +203,94 @@ fun TigerAndDragonGameScreen(
         }
     }
 
+    // Handle screen orientation
+    DisposableEffect(Unit) {
+        val activity = context as? Activity
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        onDispose {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
 
     val timerEnded by viewModel.timerEnded.collectAsState()
     val winResult by viewModel.winResult.collectAsState()
-    var showWinDialog by remember { mutableStateOf(false) }
-    var lastShownPeriodId by remember { mutableStateOf<String?>(null) }
+    val showWinResult by viewModel.showWinResult.collectAsState()
+    
+    // Track the last result that was actually shown to prevent ViewModel duplicates
+    var displayWinResult by remember { mutableStateOf<String?>(null) }
+    var lastShownResult by remember { mutableStateOf<String?>(null) }
+    var lastShownTime by remember { mutableStateOf(0L) }
 
-    // Show WinDialog when winResult updates after timer ends and periodId changes
-    LaunchedEffect(timerEnded, winResult) {
-        if (timerEnded && showPeriodId != null && showPeriodId != lastShownPeriodId && winResult != null) {
+    DisposableEffect(Unit) {
+        val activity = context as? Activity
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            val window = activity?.window
+            val decorView = window?.decorView
+            val controller = decorView?.windowInsetsController
+            // Hide status bar
+            controller?.hide(android.view.WindowInsets.Type.statusBars())
+            onDispose {
+                // Restore status bar when leaving
+                controller?.show(android.view.WindowInsets.Type.statusBars())
+            }
+        } else {
+            onDispose { }
+        }
+    }
+
+    // Smart approach: Detect ViewModel duplicate triggers and prevent them
+    LaunchedEffect(showWinResult) {
+        val currentTime = System.currentTimeMillis()
+        Log.d("TigerAndDragonGameScreen", "showWinResult changed to: $showWinResult, winResult: $winResult")
+        
+        if (showWinResult && winResult != null) {
+            // Check if this is a duplicate trigger (same result within 2 seconds)
+            val isDuplicate = (winResult == lastShownResult && (currentTime - lastShownTime) < 2000)
+            
+            if (!isDuplicate) {
+                Log.d("TigerAndDragonGameScreen", "Dialog triggered by showWinResult transition for: $winResult (NEW)")
+                
+                // Update tracking variables
+                lastShownResult = winResult
+                lastShownTime = currentTime
+                
+                // Clear all coins immediately
+                dragonCoins = emptyList(); tigerCoins = emptyList(); tieCoins = emptyList()
+                dragonAllCoins = emptyList(); tigerAllCoins = emptyList(); tieAllCoins = emptyList()
+                selectedChipIndex = -1
+                
+                // Show the dialog
+                displayWinResult = winResult
+                
+                // Auto-dismiss after 500ms
+                delay(500)
+                displayWinResult = null
+                
+                // Hide the ViewModel result
+                viewModel.hideWinResult()
+                
+                Log.d("TigerAndDragonGameScreen", "Dialog cycle completed for: $winResult")
+            } else {
+                Log.d("TigerAndDragonGameScreen", "DUPLICATE trigger detected for: $winResult - ignored")
+                // Still hide the result to acknowledge the ViewModel trigger
+                viewModel.hideWinResult()
+            }
+        }
+    }
+    
+    // Reset tracking after enough time has passed for new games
+    LaunchedEffect(timerEnded) {
+        if (timerEnded) {
+            // Clear coins
             dragonCoins = emptyList(); tigerCoins = emptyList(); tieCoins = emptyList()
             dragonAllCoins = emptyList(); tigerAllCoins = emptyList(); tieAllCoins = emptyList()
             selectedChipIndex = -1
-            showWinDialog = true
-            lastShownPeriodId = showPeriodId
+            
+            // Reset tracking after 10 seconds to allow same results in new games
+            delay(10000)
+            lastShownResult = null
+            lastShownTime = 0L
+            Log.d("TigerAndDragonGameScreen", "Reset result tracking for new game cycle")
         }
     }
 
@@ -342,21 +405,20 @@ fun TigerAndDragonGameScreen(
             val overlayWidth = maxWidth * 0.18f
 
             // Main game table area (increased size and better positioning)
-            BoxWithConstraints(
+            val tableWidth = maxWidth * 0.78f
+            val tableHeight = maxHeight * 0.75f
+            val borderThickness = tableWidth * 0.04f // Slightly reduced border
+            val chipSize = tableWidth * 0.10f
+            val avatarSize = chipSize * 0.8f
+            val cornerRadius = tableHeight * 0.5f
+            val borderCornerRadius = tableHeight * 0.38f
+
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.78f) // Increased width
-                    .fillMaxHeight(0.75f) // Increased height
+                    .size(tableWidth, tableHeight)
                     .align(Alignment.BottomCenter)
                     .padding(bottom = maxHeight * 0.16f) // Adjusted bottom padding
             ) {
-                val tableWidth = maxWidth
-                val tableHeight = maxHeight
-                val borderThickness = tableWidth * 0.04f // Slightly reduced border
-                val chipSize = tableWidth * 0.10f
-                val avatarSize = chipSize * 0.8f
-                val cornerRadius = tableHeight * 0.5f
-                val borderCornerRadius = tableHeight * 0.38f
-
                 Box(
                     modifier = Modifier
                         .align(Alignment.Center)
@@ -427,7 +489,6 @@ fun TigerAndDragonGameScreen(
                                     .background(Color(0xFF2B3A4B))
                                     .clickable { addCoinToSection("dragon") }
                             ) {
-                                // Image and text first
                                 Column(
                                     modifier = Modifier.fillMaxSize(),
                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -437,16 +498,19 @@ fun TigerAndDragonGameScreen(
                                         painterResource(R.drawable.dragon),
                                         contentDescription = "Dragon",
                                         modifier = Modifier
-                                            .size(avatarSize * 2.8f)
+                                            .size(avatarSize * 2.0f)
                                             .alpha(0.65f)
                                     )
-                                    Spacer(modifier = Modifier.height(tableHeight * 0.02f))
+                                    Spacer(modifier = Modifier.height(tableHeight * 0.01f))
                                     Text(
                                         text = "Dragon\n1:2",
                                         color = Color.White,
                                         textAlign = TextAlign.Center,
-                                        fontSize = (tableHeight * 0.08f).value.sp,
-                                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                                        fontSize = (tableHeight * 0.055f).value.sp,
+                                        lineHeight = (tableHeight * 0.06f).value.sp,
+                                        modifier = Modifier
+                                            .align(Alignment.CenterHorizontally)
+                                            .padding(top = 0.dp)
                                     )
                                 }
                                 // Coins at the bottom, with higher z-index
@@ -607,7 +671,6 @@ fun TigerAndDragonGameScreen(
                                     .background(Color(0xFFED6A5A))
                                     .clickable { addCoinToSection("tiger") }
                             ) {
-                                // Image and text first
                                 Column(
                                     modifier = Modifier.fillMaxSize(),
                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -617,16 +680,19 @@ fun TigerAndDragonGameScreen(
                                         painterResource(R.drawable.tiger),
                                         contentDescription = "Tiger",
                                         modifier = Modifier
-                                            .size(avatarSize * 2.8f)
+                                            .size(avatarSize * 2.0f)
                                             .alpha(0.65f)
                                     )
-                                    Spacer(modifier = Modifier.height(tableHeight * 0.02f))
+                                    Spacer(modifier = Modifier.height(tableHeight * 0.01f))
                                     Text(
                                         text = "Tiger\n1:2",
                                         color = Color.White,
                                         textAlign = TextAlign.Center,
-                                        fontSize = (tableHeight * 0.08f).value.sp,
-                                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                                        fontSize = (tableHeight * 0.055f).value.sp,
+                                        lineHeight = (tableHeight * 0.06f).value.sp,
+                                        modifier = Modifier
+                                            .align(Alignment.CenterHorizontally)
+                                            .padding(top = 0.dp)
                                     )
                                 }
                                 // Coins at the bottom, with higher z-index
@@ -968,33 +1034,66 @@ fun TigerAndDragonGameScreen(
                 )
                 Spacer(modifier = Modifier.width(40.dp))
 
-                // Redesigned timer box - now uses ViewModel timer
-                Box(
-                    modifier = Modifier
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color(0xFF43A047), // Green top
-                                    Color(0xFFB3C7F7), // Blue middle
-                                    Color(0xFFED6A5A)  // Orange bottom
-                                )
-                            ),
-                            shape = RoundedCornerShape(24.dp)
-                        )
-                        .border(3.dp, Color(0xFF1B263B), RoundedCornerShape(24.dp))
-                        .shadow(10.dp, RoundedCornerShape(24.dp))
-                        .padding(horizontal = 38.dp, vertical = 18.dp),
-                    contentAlignment = Alignment.Center
+                // Column containing timer and period box
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    // Use ViewModel timer instead of local timer
-                    Text(
-                        text = secondsRemaining.toString(),
-                        color = Color(0xFF1B263B),
-                        fontSize = 38.sp,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                    // Timer box
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color(0xFF43A047), // Green top
+                                        Color(0xFFB3C7F7), // Blue middle
+                                        Color(0xFFED6A5A)  // Orange bottom
+                                    )
+                                ),
+                                shape = RoundedCornerShape(24.dp)
+                            )
+                            .border(3.dp, Color(0xFF1B263B), RoundedCornerShape(24.dp))
+                            .shadow(10.dp, RoundedCornerShape(24.dp))
+                            .padding(horizontal = 32.dp, vertical = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Use ViewModel timer instead of local timer
+                        Text(
+                            text = secondsRemaining.toString(),
+                            color = Color(0xFF1B263B),
+                            fontSize = 28.sp,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    // Period box
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        Color(0xFF1976D2), // Blue left
+                                        Color(0xFF64B5F6)  // Blue right
+                                    )
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .border(2.dp, Color.White, RoundedCornerShape(12.dp))
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (showPeriodId.isNotEmpty()) "Period: $showPeriodId" else "Period: ...",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                        )
+                    }
                 }
+                
                 Spacer(modifier = Modifier.width(40.dp))
 
                 // Tiger image with vibration animation
@@ -1026,9 +1125,9 @@ fun TigerAndDragonGameScreen(
                 )
             }
         }
-
-        // WinDialog after timer ends, using API result
-        if (showWinDialog) {
+        
+        // WinDialog with simplified state management
+        if (displayWinResult != null) {
             androidx.compose.material3.Surface(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1037,7 +1136,7 @@ fun TigerAndDragonGameScreen(
                 color = Color.Transparent
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    when (winResult?.lowercase()) {
+                    when (displayWinResult?.lowercase()) {
                         "dragon" -> Image(
                             painter = painterResource(R.drawable.dragon),
                             contentDescription = "Dragon Wins",
@@ -1059,11 +1158,6 @@ fun TigerAndDragonGameScreen(
                             fontSize = 32.sp
                         )
                     }
-                    // Dismiss after 1s
-                    LaunchedEffect(winResult) {
-                        delay(1000)
-                        showWinDialog = false
-                    }
                 }
             }
         }
@@ -1082,22 +1176,25 @@ fun TigerAndDragonGameScreen(
 @Composable
 fun UserChip(userName: String, amount: Double, avatarRes: Int, modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier,
+        modifier = modifier
+            .padding(vertical = 2.dp), // Add vertical padding to prevent overlap
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Image(
             painter = painterResource(avatarRes),
             contentDescription = userName,
             modifier = Modifier
-                .size(32.dp)
+                .size(24.dp) // Smaller image
                 .background(Color.White, shape = CircleShape)
                 .padding(1.dp)
         )
         Spacer(modifier = Modifier.height(1.dp))
         Text(
-            text = userName,
+            text = "$userName\n₹${String.format("%.2f", amount)}", // Combined text in two lines
             color = Color(0xFF39FF14), // more opaque green
-            fontSize = 10.sp,
+            fontSize = 8.sp, // Smaller font
+            lineHeight = 9.sp, // Tight line spacing
+            textAlign = TextAlign.Center,
             modifier = Modifier
                 .background(
                     Brush.verticalGradient(
@@ -1106,25 +1203,9 @@ fun UserChip(userName: String, amount: Double, avatarRes: Int, modifier: Modifie
                             Color.Transparent
                         )
                     ),
-                    shape = RoundedCornerShape(4.dp)
+                    shape = RoundedCornerShape(3.dp)
                 )
-                .padding(horizontal = 3.dp, vertical = 1.dp)
-        )
-        Text(
-            text = String.format("%.2f", amount),
-            color = Color(0xFF39FF14), // more opaque green
-            fontSize = 10.sp,
-            modifier = Modifier
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0x5539FF14),
-                            Color.Transparent
-                        )
-                    ),
-                    shape = RoundedCornerShape(4.dp)
-                )
-                .padding(horizontal = 3.dp, vertical = 1.dp)
+                .padding(horizontal = 2.dp, vertical = 1.dp) // Smaller padding
         )
     }
 }

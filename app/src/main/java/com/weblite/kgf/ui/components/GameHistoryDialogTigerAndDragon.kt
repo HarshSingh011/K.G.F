@@ -4,8 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -15,7 +13,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.weblite.kgf.ui.screens.game.viewmodel.TigerAndDragonViewModel
-import android.util.Log
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -97,34 +94,27 @@ fun GameHistoryDialogTigerAndDragon(
                     )
                 }
 
-                // Use BoxWithConstraints to calculate tab button widths
-                BoxWithConstraints(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 80.dp, end = 16.dp)
                 ) {
-                    val totalWidth = maxWidth
-                    val buttonCount = 2
-                    val buttonSpacing = 8.dp
-                    val availableWidthForButtons = (totalWidth.value - (buttonSpacing.value * (buttonCount - 1))).dp
-                    val buttonWidth = (availableWidthForButtons.value / buttonCount).dp
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceAround,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TabButton(
                             text = "Game History",
                             isSelected = activeTab == "game-history",
                             onClick = { onTabChange("game-history") },
-                            modifier = Modifier.width(buttonWidth)
+                            modifier = Modifier.weight(1f)
                         )
                         TabButton(
                             text = "My History",
                             isSelected = activeTab == "my-history",
                             onClick = { onTabChange("my-history") },
-                            modifier = Modifier.width(buttonWidth)
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
