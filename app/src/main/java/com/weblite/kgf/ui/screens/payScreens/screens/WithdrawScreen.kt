@@ -1,5 +1,6 @@
 package com.weblite.kgf.ui.screens.payScreens
 
+
 import com.weblite.kgf.presentation.withdraw.WithdrawBankViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.widget.Toast
@@ -83,12 +84,15 @@ fun WithdrawScreen(
     viewModel: MainViewModel = hiltViewModel()
 ) {
     // ...existing variable definitions...
-    // --- Bank Details API Integration (after all variables) ---
+    // --- Bank & UPI Details API Integration (after all variables) ---
     val bankViewModel: WithdrawBankViewModel = viewModel()
+    val upiViewModel: com.weblite.kgf.presentation.withdraw.WithdrawUpiViewModel = viewModel()
     val bankState by bankViewModel.state.collectAsState()
+    val upiState by upiViewModel.state.collectAsState()
     val userId = "6763043294" // TODO: Replace with actual user id from session
     LaunchedEffect(Unit) {
         bankViewModel.fetchBankDetails(userId)
+        upiViewModel.fetchUpiDetails(userId)
     }
     val scrollState = rememberScrollState()
     val context = LocalContext.current
@@ -135,65 +139,188 @@ fun WithdrawScreen(
         onShowBottomBar(false)
     }
     var showAddBankDialog by remember { mutableStateOf(false) }
+    val addBankLoading by bankViewModel.addBankLoading.collectAsState()
+    val addBankError by bankViewModel.addBankError.collectAsState()
     if (showAddBankDialog) {
+        var pendingBankData by remember { mutableStateOf<Pair<List<String>, (() -> Unit)>?>(null) }
+        var bankFormSubmitted by remember { mutableStateOf(false) }
         BankAccountDialog(
             onMode = "Add",
             onDismiss = { showAddBankDialog = false },
             onSave = { bankName, fullName, accountNumber, phone, ifsc ->
-                SharedPrefManager.setString("BANK_NAME", bankName)
-                SharedPrefManager.setString("FULL_NAME", fullName)
-                SharedPrefManager.setString("ACCOUNT_NUMBER", accountNumber)
-                SharedPrefManager.setString("PHONE_NUMBER", phone)
-                SharedPrefManager.setString("IFSC_CODE", ifsc)
-                showAddBankDialog = false
+                pendingBankData = listOf(bankName, fullName, accountNumber, phone, ifsc) to {
+                    bankFormSubmitted = true
+                    bankViewModel.addBankAccount(
+                        bank = bankName,
+                        recipientName = fullName,
+                        accountNumber = accountNumber,
+                        phoneNumber = phone,
+                        ifscCode = ifsc,
+                        userId = userId
+                    )
+                }
             }
         )
+        if (pendingBankData != null) {
+            // Only call API after user clicks Save
+            LaunchedEffect(pendingBankData) {
+                pendingBankData?.second?.invoke()
+                pendingBankData = null
+            }
+        }
+        if (addBankLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+        if (addBankError != null) {
+            LaunchedEffect(addBankError) {
+                Toast.makeText(context, addBankError, Toast.LENGTH_LONG).show()
+            }
+        }
+        // Only close dialog after a successful API call AND user submitted the form
+        if (bankFormSubmitted && !addBankLoading && addBankError == null && pendingBankData == null) {
+            showAddBankDialog = false
+            bankFormSubmitted = false
+        }
     }
 
 
     var showUpiDialog by remember { mutableStateOf(false) }
+    val upiLoading by upiViewModel.updateLoading.collectAsState()
+    val upiError by upiViewModel.updateError.collectAsState()
     if (showUpiDialog) {
+        var pendingUpiData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
+        var upiFormSubmitted by remember { mutableStateOf(false) }
         UpiDetailsDialog(
             onMode = "Enter",
             onDismiss = { showUpiDialog = false },
             onUpdate = { name, app, upiId ->
-                SharedPrefManager.setString("UPI_NAME", name)
-                SharedPrefManager.setString("UPI_APP", app)
-                SharedPrefManager.setString("UPI_ID", upiId)
-                showUpiDialog = false
+                pendingUpiData = Triple(name, app, upiId)
+                upiFormSubmitted = true
             }
         )
+        if (pendingUpiData != null) {
+            LaunchedEffect(pendingUpiData) {
+                val (name, app, upiId) = pendingUpiData!!
+                upiViewModel.updateUpiDetails(
+                    userName = name,
+                    upiId = upiId,
+                    upiProvider = app,
+                    userId = userId
+                )
+                pendingUpiData = null
+            }
+        }
+        if (upiLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+        if (upiError != null) {
+            LaunchedEffect(upiError) {
+                Toast.makeText(context, upiError, Toast.LENGTH_LONG).show()
+            }
+        }
+        // Only close dialog after a successful API call AND user submitted the form
+        if (upiFormSubmitted && !upiLoading && upiError == null && pendingUpiData == null) {
+            showUpiDialog = false
+            upiFormSubmitted = false
+        }
     }
     ///////
     var showAddBankEditDialog by remember { mutableStateOf(false) }
+    val editBankLoading by bankViewModel.addBankLoading.collectAsState()
+    val editBankError by bankViewModel.addBankError.collectAsState()
     if (showAddBankEditDialog) {
+        var pendingEditBankData by remember { mutableStateOf<Pair<List<String>, (() -> Unit)>?>(null) }
+        var editBankFormSubmitted by remember { mutableStateOf(false) }
         BankAccountDialog(
             onMode = "Edit",
             onDismiss = { showAddBankEditDialog = false },
             onSave = { bankName, fullName, accountNumber, phone, ifsc ->
-                SharedPrefManager.setString("BANK_NAME", bankName)
-                SharedPrefManager.setString("FULL_NAME", fullName)
-                SharedPrefManager.setString("ACCOUNT_NUMBER", accountNumber)
-                SharedPrefManager.setString("PHONE_NUMBER", phone)
-                SharedPrefManager.setString("IFSC_CODE", ifsc)
-                showAddBankEditDialog = false
+                pendingEditBankData = listOf(bankName, fullName, accountNumber, phone, ifsc) to {
+                    editBankFormSubmitted = true
+                    bankViewModel.addBankAccount(
+                        bank = bankName,
+                        recipientName = fullName,
+                        accountNumber = accountNumber,
+                        phoneNumber = phone,
+                        ifscCode = ifsc,
+                        userId = userId
+                    )
+                }
             }
         )
+        if (pendingEditBankData != null) {
+            LaunchedEffect(pendingEditBankData) {
+                pendingEditBankData?.second?.invoke()
+                pendingEditBankData = null
+            }
+        }
+        if (editBankLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+        if (editBankError != null) {
+            LaunchedEffect(editBankError) {
+                Toast.makeText(context, editBankError, Toast.LENGTH_LONG).show()
+            }
+        }
+        // Only close dialog after a successful API call AND user submitted the form
+        if (editBankFormSubmitted && !editBankLoading && editBankError == null && pendingEditBankData == null) {
+            showAddBankEditDialog = false
+            editBankFormSubmitted = false
+            // Refetch bank details to update UI
+            LaunchedEffect(Unit) {
+                bankViewModel.fetchBankDetails(userId)
+            }
+        }
     }
 
 
     var showUpiEditDialog by remember { mutableStateOf(false) }
+    val upiEditLoading by upiViewModel.updateLoading.collectAsState()
+    val upiEditError by upiViewModel.updateError.collectAsState()
     if (showUpiEditDialog) {
+        var pendingUpiEditData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
+        var upiEditFormSubmitted by remember { mutableStateOf(false) }
         UpiDetailsDialog(
             onMode = "Edit",
             onDismiss = { showUpiEditDialog = false },
             onUpdate = { name, app, upiId ->
-                SharedPrefManager.setString("UPI_NAME", name)
-                SharedPrefManager.setString("UPI_APP", app)
-                SharedPrefManager.setString("UPI_ID", upiId)
-                showUpiEditDialog = false
+                pendingUpiEditData = Triple(name, app, upiId)
+                upiEditFormSubmitted = true
             }
         )
+        if (pendingUpiEditData != null) {
+            LaunchedEffect(pendingUpiEditData) {
+                val (name, app, upiId) = pendingUpiEditData!!
+                upiViewModel.updateUpiDetails(
+                    userName = name,
+                    upiId = upiId,
+                    upiProvider = app,
+                    userId = userId
+                )
+                pendingUpiEditData = null
+            }
+        }
+        if (upiEditLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+        if (upiEditError != null) {
+            LaunchedEffect(upiEditError) {
+                Toast.makeText(context, upiEditError, Toast.LENGTH_LONG).show()
+            }
+        }
+        // Only close dialog after a successful API call AND user submitted the form
+        if (upiEditFormSubmitted && !upiEditLoading && upiEditError == null && pendingUpiEditData == null) {
+            showUpiEditDialog = false
+            upiEditFormSubmitted = false
+        }
     }
 
 
@@ -415,6 +542,19 @@ fun WithdrawScreen(
                 bankName = bankDetails.bank_name ?: "",
                 ifsc = bankDetails.ifsc_code ?: "",
                 onEditClick = { showAddBankEditDialog = true }
+            )
+        }
+
+        // Show UPI card below bank card if API returns valid data
+        val upiDetails = upiState.result
+        if (!upiState.loading && upiDetails?.upi_id?.isNotBlank() == true) {
+            com.weblite.kgf.ui.screens.payScreens.screens.UpiAccountApiCard(
+                name = upiDetails.name ?: "",
+                upiId = upiDetails.upi_id ?: "",
+                upiProvider = upiDetails.upi_provider,
+                onEditClick = { showUpiEditDialog = true },
+                isSelected = isSelectedUPI,
+                onSelect = { isSelectedUPI = !isSelectedUPI }
             )
         }
 

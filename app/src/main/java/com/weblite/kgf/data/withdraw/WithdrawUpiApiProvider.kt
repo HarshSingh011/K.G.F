@@ -3,14 +3,14 @@ package com.weblite.kgf.data.withdraw
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-object WithdrawApiProvider {
+object WithdrawUpiApiProvider {
     private const val BASE_URL = "https://newkgfindia.com/"
 
-    val api: WithdrawApi by lazy {
+    val api: WithdrawUpiApi by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(WithdrawApi::class.java)
+            .create(WithdrawUpiApi::class.java)
     }
 }
