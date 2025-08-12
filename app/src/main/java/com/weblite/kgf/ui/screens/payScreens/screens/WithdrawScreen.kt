@@ -1,5 +1,7 @@
 package com.weblite.kgf.ui.screens.payScreens
 
+import com.weblite.kgf.presentation.withdraw.WithdrawBankViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.animateDpAsState
@@ -63,6 +65,7 @@ import com.weblite.kgf.Api.MainViewModel
 import com.weblite.kgf.Api.Resource
 import com.weblite.kgf.Api.SharedPrefManager
 import com.weblite.kgf.ui.screens.auth.ChangePasswordDialog
+import com.weblite.kgf.ui.screens.payScreens.screens.BankAccountApiCard
 import kotlinx.coroutines.launch
 
 data class UpiAccount(
@@ -78,7 +81,15 @@ fun WithdrawScreen(
     onShowTopBar: (Boolean) -> Unit,
     onShowBottomBar: (Boolean) -> Unit,
     viewModel: MainViewModel = hiltViewModel()
-){
+) {
+    // ...existing variable definitions...
+    // --- Bank Details API Integration (after all variables) ---
+    val bankViewModel: WithdrawBankViewModel = viewModel()
+    val bankState by bankViewModel.state.collectAsState()
+    val userId = "6763043294" // TODO: Replace with actual user id from session
+    LaunchedEffect(Unit) {
+        bankViewModel.fetchBankDetails(userId)
+    }
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     val backgroundColor = Brush.verticalGradient(
@@ -395,32 +406,15 @@ fun WithdrawScreen(
             }
         }
         ////////
-        if (showBankcard) {
-            UserBankAccountCard(
-                accountNumber = accountNumber,
-                isSelected = isSelectedBank,
-                onCheckedChange = { checked ->
-                    isSelectedBank = checked
-                    if (checked) isSelectedUPI = false
-                },
-                onEditClick = {
-                    showAddBankEditDialog = true
-                }
-            )
-        }
-
-        if (showUPIcard) {
-            UserUpiCard(
-                userName = userName,
-                upiId = upiId,
-                isSelected = isSelectedUPI,
-                onCheckedChange = { checked ->
-                    isSelectedUPI = checked
-                    if (checked) isSelectedBank = false
-                },
-                onEditClick = {
-                    showUpiEditDialog = true
-                }
+        // Show bank account card only if API returns valid data (place after BANK CARD/UPI row)
+        val bankDetails = bankState.result
+        if (!bankState.loading && bankDetails?.account_no?.isNotBlank() == true) {
+            BankAccountApiCard(
+                name = bankDetails.name ?: "",
+                accountNumber = bankDetails.account_no ?: "",
+                bankName = bankDetails.bank_name ?: "",
+                ifsc = bankDetails.ifsc_code ?: "",
+                onEditClick = { showAddBankEditDialog = true }
             )
         }
 
