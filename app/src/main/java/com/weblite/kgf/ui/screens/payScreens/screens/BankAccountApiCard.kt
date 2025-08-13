@@ -23,7 +23,9 @@ fun BankAccountApiCard(
     accountNumber: String,
     bankName: String,
     ifsc: String,
-    onEditClick: () -> Unit
+    onEditClick: () -> Unit,
+    isSelected: Boolean = false,
+    onSelect: (() -> Unit)? = null
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -52,6 +54,16 @@ fun BankAccountApiCard(
                 )
             }
             Divider(color = Color(0xFF00EBEF), thickness = 1.dp)
+            if (onSelect != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = { onSelect() },
+                        colors = CheckboxDefaults.colors(checkedColor = Color(0xFF00EBEF))
+                    )
+                    Text("Select this bank account", color = Color.White, fontSize = 15.sp)
+                }
+            }
             Text(text = "Name: $name", color = Color.White, fontSize = 15.sp)
             Text(text = "Bank: $bankName", color = Color.White, fontSize = 15.sp)
             Text(text = "A/C No: $accountNumber", color = Color.White, fontSize = 15.sp)

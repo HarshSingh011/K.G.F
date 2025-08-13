@@ -42,11 +42,6 @@ import com.weblite.kgf.ui.components.ON_DEPOSIT
 import com.weblite.kgf.ui.components.ON_DEPO_HIST
 import com.weblite.kgf.ui.components.ON_WITHDRAW
 import com.weblite.kgf.ui.components.ON_WITHDR_HIST
-import com.weblite.kgf.ui.components.WALLET_MAIN
-import com.weblite.kgf.ui.screens.payScreens.DepositHistory
-import com.weblite.kgf.ui.screens.payScreens.DepositScreen
-import com.weblite.kgf.ui.screens.payScreens.WithdrawHistory
-import com.weblite.kgf.ui.screens.payScreens.WithdrawScreen
 import com.weblite.kgf.utils.AssetIcon
 
 @Composable

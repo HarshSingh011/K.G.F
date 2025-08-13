@@ -1,7 +1,7 @@
 package com.weblite.kgf.ui.screens.payScreens
 
-
-import com.weblite.kgf.presentation.withdraw.WithdrawBankViewModel
+import com.google.gson.Gson
+import com.google.gson.JsonObject
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.widget.Toast
 import androidx.annotation.DrawableRes
@@ -65,9 +65,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.weblite.kgf.Api.MainViewModel
 import com.weblite.kgf.Api.Resource
 import com.weblite.kgf.Api.SharedPrefManager
+import com.weblite.kgf.data.models.auth.WithdrawResponse
+import com.weblite.kgf.data.withdraw.WithdrawApiProvider
+import com.weblite.kgf.presentation.withdraw.WithdrawBankViewModel
+import com.weblite.kgf.presentation.withdraw.WithdrawUpiViewModel
 import com.weblite.kgf.ui.screens.auth.ChangePasswordDialog
 import com.weblite.kgf.ui.screens.payScreens.screens.BankAccountApiCard
 import kotlinx.coroutines.launch
+import com.weblite.kgf.ui.components.ON_WITHDR_HIST
 
 data class UpiAccount(
     val upiUserName: String = "Sushanta behera",
@@ -75,8 +80,9 @@ data class UpiAccount(
     val upiId: String = "123@pytm"
 )
 @Composable
+
 fun WithdrawScreen(
-    balance: String = "₹ 17,511,164.75",
+    navController: NavController,
     onBackClick: () -> Unit = {},
     onHistoryClick: () -> Unit = {},
     onShowTopBar: (Boolean) -> Unit,
@@ -85,14 +91,32 @@ fun WithdrawScreen(
 ) {
     // ...existing variable definitions...
     // --- Bank & UPI Details API Integration (after all variables) ---
-    val bankViewModel: WithdrawBankViewModel = viewModel()
-    val upiViewModel: com.weblite.kgf.presentation.withdraw.WithdrawUpiViewModel = viewModel()
+    val bankViewModel: WithdrawBankViewModel = hiltViewModel()
+    val upiViewModel: WithdrawUpiViewModel = hiltViewModel()
     val bankState by bankViewModel.state.collectAsState()
     val upiState by upiViewModel.state.collectAsState()
-    val userId = "6763043294" // TODO: Replace with actual user id from session
-    LaunchedEffect(Unit) {
-        bankViewModel.fetchBankDetails(userId)
-        upiViewModel.fetchUpiDetails(userId)
+    // Use userId from SharedPrefManager for API calls. Try common keys if USER_ID is not set.
+    val userId = SharedPrefManager.getString("USER_ID")
+        ?: SharedPrefManager.getString("user_id")
+        ?: SharedPrefManager.getString("id")
+        ?: ""
+    // For updateAccountDetails and updateUpiDetails, use Bank_User_Sl_Id if present
+    val bankUserSlId = SharedPrefManager.getString("Bank_User_Sl_Id") ?: ""
+    if (userId.isBlank()) {
+        android.util.Log.e("WithdrawScreen", "user_id is missing in SharedPrefManager. API calls will fail.")
+    }
+    // Always use user_id from SharedPrefManager for API calls
+    val apiUserId = SharedPrefManager.getString("USER_ID")
+        ?: SharedPrefManager.getString("user_id")
+        ?: SharedPrefManager.getString("id")
+        ?: ""
+    LaunchedEffect(apiUserId) {
+        if (apiUserId.isNotBlank()) {
+            bankViewModel.fetchBankDetails(apiUserId)
+            upiViewModel.fetchUpiDetails(apiUserId)
+        } else {
+            android.util.Log.e("WithdrawScreen", "user_id is missing in SharedPrefManager. API calls will fail.")
+        }
     }
     val scrollState = rememberScrollState()
     val context = LocalContext.current
@@ -115,11 +139,17 @@ fun WithdrawScreen(
     var showUPIcard by remember { mutableStateOf(true) }
     val dashboardState = viewModel.dashboardState.value
 
-    var totalBalance by remember { mutableStateOf("") }
-    if (dashboardState is Resource.Success) {
-        dashboardState.data?.result?.let { result ->
-            totalBalance = result.totalBalance
-        }
+    // Always fetch dashboard on screen entry for up-to-date balance
+    LaunchedEffect(userId) {
+        if (userId.isNotBlank()) viewModel.fetchDashboard(userId)
+    }
+
+    val totalBalance = if (dashboardState is Resource.Success) {
+        dashboardState.data?.result?.totalBalance ?: "0.00"
+    } else if (dashboardState is Resource.Loading) {
+        "Loading..."
+    } else {
+        "0.00"
     }
     /////info
     var isSelectedUPI by remember { mutableStateOf(false) }
@@ -127,9 +157,10 @@ fun WithdrawScreen(
     val upiAccounts = remember { mutableStateListOf<UpiAccount>() }
 
 
-    val accountNumber = SharedPrefManager.getString("ACCOUNT_NUMBER") ?: ""
-    val userName = SharedPrefManager.getString("UPI_NAME") ?: ""
-    val upiId = SharedPrefManager.getString("UPI_ID") ?: ""
+    // Remove SharedPrefManager usage for account/UPI details if not needed
+    val accountNumber = bankState.result?.account_no ?: ""
+    val userName = bankState.result?.name ?: ""
+    val upiId = bankState.result?.upi_id ?: ""
 
     showBankcard = userName.isNotBlank() && accountNumber.isNotBlank()
     showUPIcard = userName.isNotBlank() && upiId.isNotBlank()
@@ -144,6 +175,7 @@ fun WithdrawScreen(
     if (showAddBankDialog) {
         var pendingBankData by remember { mutableStateOf<Pair<List<String>, (() -> Unit)>?>(null) }
         var bankFormSubmitted by remember { mutableStateOf(false) }
+        var shouldFetchBankDetails by remember { mutableStateOf(false) }
         BankAccountDialog(
             onMode = "Add",
             onDismiss = { showAddBankDialog = false },
@@ -158,6 +190,7 @@ fun WithdrawScreen(
                         ifscCode = ifsc,
                         userId = userId
                     )
+                    shouldFetchBankDetails = true
                 }
             }
         )
@@ -178,8 +211,14 @@ fun WithdrawScreen(
                 Toast.makeText(context, addBankError, Toast.LENGTH_LONG).show()
             }
         }
-        // Only close dialog after a successful API call AND user submitted the form
+        // After successful add, fetch bank details to update UI
         if (bankFormSubmitted && !addBankLoading && addBankError == null && pendingBankData == null) {
+            if (shouldFetchBankDetails) {
+                LaunchedEffect(shouldFetchBankDetails) {
+                    bankViewModel.fetchBankDetails(userId)
+                    shouldFetchBankDetails = false
+                }
+            }
             showAddBankDialog = false
             bankFormSubmitted = false
         }
@@ -192,6 +231,7 @@ fun WithdrawScreen(
     if (showUpiDialog) {
         var pendingUpiData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
         var upiFormSubmitted by remember { mutableStateOf(false) }
+        var shouldFetchUpiDetails by remember { mutableStateOf(false) }
         UpiDetailsDialog(
             onMode = "Enter",
             onDismiss = { showUpiDialog = false },
@@ -203,12 +243,13 @@ fun WithdrawScreen(
         if (pendingUpiData != null) {
             LaunchedEffect(pendingUpiData) {
                 val (name, app, upiId) = pendingUpiData!!
-                upiViewModel.updateUpiDetails(
+                upiViewModel.userUpiDetails(
                     userName = name,
                     upiId = upiId,
                     upiProvider = app,
                     userId = userId
                 )
+                shouldFetchUpiDetails = true
                 pendingUpiData = null
             }
         }
@@ -222,8 +263,14 @@ fun WithdrawScreen(
                 Toast.makeText(context, upiError, Toast.LENGTH_LONG).show()
             }
         }
-        // Only close dialog after a successful API call AND user submitted the form
+        // After successful update, fetch UPI details to update UI
         if (upiFormSubmitted && !upiLoading && upiError == null && pendingUpiData == null) {
+            if (shouldFetchUpiDetails) {
+                LaunchedEffect(shouldFetchUpiDetails) {
+                    upiViewModel.fetchUpiDetails(userId)
+                    shouldFetchUpiDetails = false
+                }
+            }
             showUpiDialog = false
             upiFormSubmitted = false
         }
@@ -232,25 +279,36 @@ fun WithdrawScreen(
     var showAddBankEditDialog by remember { mutableStateOf(false) }
     val editBankLoading by bankViewModel.addBankLoading.collectAsState()
     val editBankError by bankViewModel.addBankError.collectAsState()
+    val bankEditDetails = bankState.result
     if (showAddBankEditDialog) {
+        val coroutineScope = rememberCoroutineScope()
         var pendingEditBankData by remember { mutableStateOf<Pair<List<String>, (() -> Unit)>?>(null) }
         var editBankFormSubmitted by remember { mutableStateOf(false) }
+        var shouldFetchBankDetailsEdit by remember { mutableStateOf(false) }
         BankAccountDialog(
             onMode = "Edit",
             onDismiss = { showAddBankEditDialog = false },
             onSave = { bankName, fullName, accountNumber, phone, ifsc ->
                 pendingEditBankData = listOf(bankName, fullName, accountNumber, phone, ifsc) to {
                     editBankFormSubmitted = true
-                    bankViewModel.addBankAccount(
-                        bank = bankName,
-                        recipientName = fullName,
-                        accountNumber = accountNumber,
-                        phoneNumber = phone,
-                        ifscCode = ifsc,
-                        userId = userId
-                    )
+                    coroutineScope.launch {
+                        bankViewModel.updateAccountDetails(
+                            userId = if (bankUserSlId.isNotBlank()) bankUserSlId else userId,
+                            bank = bankName,
+                            recipientName = fullName,
+                            accountNumber = accountNumber,
+                            phoneNumber = phone,
+                            ifscCode = ifsc
+                        )
+                        shouldFetchBankDetailsEdit = true
+                    }
                 }
-            }
+            },
+            initialBankName = bankEditDetails?.bank_name ?: "",
+            initialFullName = bankEditDetails?.name ?: "",
+            initialAccountNumber = bankEditDetails?.account_no ?: "",
+            initialPhoneNumber = bankEditDetails?.contact_no ?: "",
+            initialIfscCode = bankEditDetails?.ifsc_code ?: ""
         )
         if (pendingEditBankData != null) {
             LaunchedEffect(pendingEditBankData) {
@@ -268,14 +326,16 @@ fun WithdrawScreen(
                 Toast.makeText(context, editBankError, Toast.LENGTH_LONG).show()
             }
         }
-        // Only close dialog after a successful API call AND user submitted the form
+        // After successful update, fetch bank details to update UI
         if (editBankFormSubmitted && !editBankLoading && editBankError == null && pendingEditBankData == null) {
+            if (shouldFetchBankDetailsEdit) {
+                LaunchedEffect(shouldFetchBankDetailsEdit) {
+                    bankViewModel.fetchBankDetails(userId)
+                    shouldFetchBankDetailsEdit = false
+                }
+            }
             showAddBankEditDialog = false
             editBankFormSubmitted = false
-            // Refetch bank details to update UI
-            LaunchedEffect(Unit) {
-                bankViewModel.fetchBankDetails(userId)
-            }
         }
     }
 
@@ -283,26 +343,34 @@ fun WithdrawScreen(
     var showUpiEditDialog by remember { mutableStateOf(false) }
     val upiEditLoading by upiViewModel.updateLoading.collectAsState()
     val upiEditError by upiViewModel.updateError.collectAsState()
+    val upiEditDetails = upiState.result
     if (showUpiEditDialog) {
+        val coroutineScope = rememberCoroutineScope()
         var pendingUpiEditData by remember { mutableStateOf<Triple<String, String, String>?>(null) }
         var upiEditFormSubmitted by remember { mutableStateOf(false) }
+        var shouldFetchUpiDetailsEdit by remember { mutableStateOf(false) }
         UpiDetailsDialog(
             onMode = "Edit",
             onDismiss = { showUpiEditDialog = false },
             onUpdate = { name, app, upiId ->
                 pendingUpiEditData = Triple(name, app, upiId)
                 upiEditFormSubmitted = true
-            }
+                coroutineScope.launch {
+                    upiViewModel.updateUpiDetails(
+                        userId = if (bankUserSlId.isNotBlank()) bankUserSlId else userId,
+                        name = name,
+                        upiId = upiId,
+                        upiProvider = app
+                    )
+                    shouldFetchUpiDetailsEdit = true
+                }
+            },
+            initialName = upiEditDetails?.name ?: "",
+            initialApp = upiEditDetails?.upi_provider ?: "",
+            initialUpiId = upiEditDetails?.upi_id ?: ""
         )
         if (pendingUpiEditData != null) {
             LaunchedEffect(pendingUpiEditData) {
-                val (name, app, upiId) = pendingUpiEditData!!
-                upiViewModel.updateUpiDetails(
-                    userName = name,
-                    upiId = upiId,
-                    upiProvider = app,
-                    userId = userId
-                )
                 pendingUpiEditData = null
             }
         }
@@ -316,8 +384,14 @@ fun WithdrawScreen(
                 Toast.makeText(context, upiEditError, Toast.LENGTH_LONG).show()
             }
         }
-        // Only close dialog after a successful API call AND user submitted the form
+        // After successful update, fetch UPI details to update UI
         if (upiEditFormSubmitted && !upiEditLoading && upiEditError == null && pendingUpiEditData == null) {
+            if (shouldFetchUpiDetailsEdit) {
+                LaunchedEffect(shouldFetchUpiDetailsEdit) {
+                    upiViewModel.fetchUpiDetails(userId)
+                    shouldFetchUpiDetailsEdit = false
+                }
+            }
             showUpiEditDialog = false
             upiEditFormSubmitted = false
         }
@@ -455,6 +529,8 @@ fun WithdrawScreen(
             horizontalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // BANK CARD Button
+            val bankDetails = bankState.result
+            val bankCardEnabled = bankDetails?.account_no.isNullOrBlank()
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -469,7 +545,10 @@ fun WithdrawScreen(
                     .clip(RoundedCornerShape(30.dp))
                     .border(2.dp, Color(0xFF29659A), RoundedCornerShape(30.dp))
                     .background(Color(0xFF03801e))
-                    .clickable { showAddBankDialog = true },
+                    .let { mod ->
+                        if (bankCardEnabled) mod.clickable { showAddBankDialog = true }
+                        else mod // no clickable if account exists
+                    },
                 shape = RoundedCornerShape(30.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
@@ -480,7 +559,7 @@ fun WithdrawScreen(
                 ) {
                     Image(painter = painterResource(R.drawable.phonepe),
                         contentDescription = "PhonePe",
-                        modifier = Modifier.size(iconSize).clickable { showAddBankDialog = true },
+                        modifier = Modifier.size(iconSize)
                     )
                     Text(
                         "BANK CARD",
@@ -493,44 +572,47 @@ fun WithdrawScreen(
             }
 
             // UPI Details Button
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .height(75.dp)
-                    .shadow(
-                        elevation = 10.dp,
-                        shape = RoundedCornerShape(30.dp),
-                        ambientColor = Color(0xff00EBEF),
-                        spotColor = Color(0xff00EBEF)
-                    )
-                    .clip(RoundedCornerShape(30.dp))
-                    .border(2.dp, Color(0xFF29659A), RoundedCornerShape(30.dp))
-                    .background(
-                        Color.White
-                    )
-                    .clickable { showUpiDialog = true },
-                shape = RoundedCornerShape(30.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-            ) {
-                Column (
-                    modifier = Modifier.fillMaxSize().padding(2.dp)
-                        .border(2.dp, Color(0xFF000000), RoundedCornerShape(30.dp)),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                val upiDetails = upiState.result
+                val upiCardEnabled = upiDetails?.upi_id.isNullOrBlank()
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .height(75.dp)
+                        .shadow(
+                            elevation = 10.dp,
+                            shape = RoundedCornerShape(30.dp),
+                            ambientColor = Color(0xff00EBEF),
+                            spotColor = Color(0xff00EBEF)
+                        )
+                        .clip(RoundedCornerShape(30.dp))
+                        .border(2.dp, Color(0xFF29659A), RoundedCornerShape(30.dp))
+                        .background(Color.White)
+                        .let { mod ->
+                            if (upiCardEnabled) mod.clickable { showUpiDialog = true }
+                            else mod // no clickable if UPI exists
+                        },
+                    shape = RoundedCornerShape(30.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                 ) {
-                    Image(painter = painterResource(R.drawable.upi),
-                        contentDescription = "PhonePe",
-                        modifier = Modifier.size(width = 48.dp, height = 40.dp)
-                    )
-                    Text(
-                        "UPI Details",
-                        color = Color.Black,
-                        fontSize = 12.sp,
-                        lineHeight = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column (
+                        modifier = Modifier.fillMaxSize().padding(2.dp)
+                            .border(2.dp, Color(0xFF000000), RoundedCornerShape(30.dp)),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Image(painter = painterResource(R.drawable.upi),
+                            contentDescription = "PhonePe",
+                            modifier = Modifier.size(width = 48.dp, height = 40.dp)
+                        )
+                        Text(
+                            "UPI Details",
+                            color = Color.Black,
+                            fontSize = 12.sp,
+                            lineHeight = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
-            }
         }
         ////////
         // Show bank account card only if API returns valid data (place after BANK CARD/UPI row)
@@ -541,7 +623,12 @@ fun WithdrawScreen(
                 accountNumber = bankDetails.account_no ?: "",
                 bankName = bankDetails.bank_name ?: "",
                 ifsc = bankDetails.ifsc_code ?: "",
-                onEditClick = { showAddBankEditDialog = true }
+                onEditClick = { showAddBankEditDialog = true },
+                isSelected = isSelectedBank,
+                onSelect = {
+                    isSelectedBank = true
+                    isSelectedUPI = false
+                }
             )
         }
 
@@ -554,7 +641,10 @@ fun WithdrawScreen(
                 upiProvider = upiDetails.upi_provider,
                 onEditClick = { showUpiEditDialog = true },
                 isSelected = isSelectedUPI,
-                onSelect = { isSelectedUPI = !isSelectedUPI }
+                onSelect = {
+                    isSelectedUPI = true
+                    isSelectedBank = false
+                }
             )
         }
 
@@ -672,8 +762,81 @@ fun WithdrawScreen(
                     colors = listOf(Color(0xFF182548), Color(0xFF041cba), Color(0xFF182548))
                 )
 
+                val context = LocalContext.current
+                val coroutineScope = rememberCoroutineScope()
+                var withdrawLoading by remember { mutableStateOf(false) }
+                var showApiError by remember { mutableStateOf<String?>(null) }
                 Button(
-                    onClick = { /* Handle withdrawal */ },
+                    onClick = {
+                        val amt = amount.toIntOrNull()
+                        if (amt == null || amt < 200) {
+                            Toast.makeText(context, "Enter a valid amount (min ₹200)", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        if (!isSelectedBank && !isSelectedUPI) {
+                            Toast.makeText(context, "Select a bank or UPI account", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        withdrawLoading = true
+                        coroutineScope.launch {
+                            try {
+                                val userIdForWithdraw = SharedPrefManager.getString("USER_ID")
+                                    ?: SharedPrefManager.getString("user_id")
+                                    ?: SharedPrefManager.getString("id")
+                                    ?: ""
+                                if (isSelectedBank && !isSelectedUPI && bankDetails != null) {
+                                    val req = com.weblite.kgf.data.models.auth.WithdrawRequestBank(
+                                        user_id = userIdForWithdraw,
+                                        amount = amt,
+                                        paymentMethod = "bank",
+                                        username = bankDetails.name ?: "",
+                                        accountNo = bankDetails.account_no ?: "",
+                                        ifsccode = bankDetails.ifsc_code ?: ""
+                                    )
+                                    WithdrawApiProvider.api.userWithdrawRequestBank(req)
+                                } else if (isSelectedUPI && !isSelectedBank && upiDetails != null) {
+                                    val req = com.weblite.kgf.data.models.auth.WithdrawRequestUpi(
+                                        user_id = userIdForWithdraw,
+                                        amount = amt,
+                                        paymentMethod = "upi",
+                                        upiId = upiDetails.upi_id ?: "",
+                                        upiProvider = upiDetails.upi_provider ?: ""
+                                    )
+                                    WithdrawApiProvider.api.userWithdrawRequestUpi(req)
+                                } else {
+                                    Toast.makeText(context, "Invalid selection. Please select only one payment method.", Toast.LENGTH_SHORT).show()
+                                    withdrawLoading = false
+                                    return@launch
+                                }
+                                // WithdrawResponse does not have status/msg fields. If we get here, treat as success.
+                                withdrawLoading = false
+                                navController.navigate(ON_WITHDR_HIST)
+                            } catch (e: Exception) {
+                                withdrawLoading = false
+                                // Try to extract error message from exception (e.g., HttpException with errorBody)
+                                var errorMsg = e.message ?: "Withdraw failed"
+                                try {
+                                    if (e is retrofit2.HttpException) {
+                                        val errorBody = e.response()?.errorBody()?.string()
+                                        if (!errorBody.isNullOrBlank()) {
+                                            val gson = Gson()
+                                            val jsonObj = gson.fromJson(errorBody, JsonObject::class.java)
+                                            val msg = jsonObj?.get("msg")?.let { if (it.isJsonNull) null else it.asString }
+                                            android.util.Log.e("WithdrawScreen", "API error msg: $msg, raw: $errorBody")
+                                            if (!msg.isNullOrBlank()) errorMsg = msg
+                                        }
+                                    }
+                                } catch (ex: Exception) {
+                                    android.util.Log.e("WithdrawScreen", "Error parsing API error: ${ex.message}")
+                                }
+                                if (errorMsg.isNullOrBlank()) errorMsg = "Withdraw failed. Please try again."
+                                showApiError = errorMsg
+                                kotlinx.coroutines.delay(2000)
+                                showApiError = null
+                            }
+                        }
+                    },
+                    enabled = !withdrawLoading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .shadow(
@@ -698,10 +861,33 @@ fun WithdrawScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Withdraw",
+                            text = if (withdrawLoading) "Processing..." else "Withdraw",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
+                    }
+                }
+                // Overlay for API error message
+                if (showApiError != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.4f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color.White,
+                            shadowElevation = 8.dp
+                        ) {
+                            Text(
+                                text = showApiError ?: "",
+                                color = Color.Red,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                modifier = Modifier.padding(24.dp)
+                            )
+                        }
                     }
                 }
 
@@ -927,16 +1113,20 @@ fun UserUpiCard(
 
 @Composable
 fun BankAccountDialog(
-    onMode: String ="",
+    onMode: String = "",
     onDismiss: () -> Unit = {},
-    onSave: (bankName: String, fullName: String, accountNumber: String, phoneNumber: String, ifscCode: String) -> Unit
-
+    onSave: (bankName: String, fullName: String, accountNumber: String, phoneNumber: String, ifscCode: String) -> Unit,
+    initialBankName: String = "",
+    initialFullName: String = "",
+    initialAccountNumber: String = "",
+    initialPhoneNumber: String = "",
+    initialIfscCode: String = ""
 ) {
-    var bankName by remember { mutableStateOf("") }
-    var fullName by remember { mutableStateOf("") }
-    var accountNumber by remember { mutableStateOf("") }
-    var phoneNumber by remember { mutableStateOf("") }
-    var ifscCode by remember { mutableStateOf("") }
+    var bankName by remember { mutableStateOf(initialBankName) }
+    var fullName by remember { mutableStateOf(initialFullName) }
+    var accountNumber by remember { mutableStateOf(initialAccountNumber) }
+    var phoneNumber by remember { mutableStateOf(initialPhoneNumber) }
+    var ifscCode by remember { mutableStateOf(initialIfscCode) }
 
     val isBankValid = bankName.isNotBlank()
     val isFullNameValid = fullName.isNotBlank()
@@ -952,7 +1142,6 @@ fun BankAccountDialog(
             color = Color.White,
             modifier = Modifier.fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 16.dp),
-
         ) {
             Column(
                 modifier = Modifier
@@ -1159,14 +1348,16 @@ fun WithPre(){
 
 @Composable
 fun UpiDetailsDialog(
-    onMode: String ="",
+    onMode: String = "",
     onDismiss: () -> Unit = {},
-    onUpdate: (name: String, app: String, upiId: String) -> Unit
-
+    onUpdate: (name: String, app: String, upiId: String) -> Unit,
+    initialName: String = "",
+    initialApp: String = "",
+    initialUpiId: String = ""
 ) {
-    var name by remember { mutableStateOf("") }
-    var upiId by remember { mutableStateOf("") }
-    var selectedApp by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(initialName) }
+    var upiId by remember { mutableStateOf(initialUpiId) }
+    var selectedApp by remember { mutableStateOf(initialApp) }
 
     var isNameTouched by remember { mutableStateOf(false) }
     var isUpiTouched by remember { mutableStateOf(false) }

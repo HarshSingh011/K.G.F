@@ -48,11 +48,23 @@ fun MainScreen() {
     var showTopBar by remember { mutableStateOf(true) }
     var showBottomBar by remember { mutableStateOf(true) }
 
-    SideEffect {
-        systemUiController.setStatusBarColor(Color.White, darkIcons = true)
+    // Add error handling state
+    var navigationError by remember { mutableStateOf<String?>(null) }
+    
+    // Add throttling to prevent rapid navigation changes
+    var lastNavigationTime by remember { mutableStateOf(0L) }
+    val navigationThrottleMs = 300L
+
+    // Initialize UI state
+    LaunchedEffect(Unit) {
+        try {
+            systemUiController.setStatusBarColor(Color.White, darkIcons = true)
+        } catch (e: Exception) {
+            android.util.Log.e("MainScreen", "Failed to set status bar color", e)
+        }
     }
 
-    // 🎯 Dynamic Top Bar
+    
     val topBar: @Composable (() -> Unit)? = if (showTopBar) {
         {
             Surface(
@@ -87,7 +99,7 @@ fun MainScreen() {
         }
     } else null
 
-    // 🎯 Dynamic Bottom Bar
+   
     val bottomBar: @Composable (() -> Unit)? = if (showBottomBar) {
         {
             NavigationBar(
@@ -133,7 +145,19 @@ fun MainScreen() {
                             )
                         },
                         selected = selected,
-                        onClick = { selectedItem = item },
+                        onClick = { 
+                            try {
+                                val currentTime = System.currentTimeMillis()
+                                if (currentTime - lastNavigationTime > navigationThrottleMs) {
+                                    selectedItem = item
+                                    lastNavigationTime = currentTime
+                                    navigationError = null
+                                }
+                            } catch (e: Exception) {
+                                navigationError = "Navigation error: ${e.message}"
+                                android.util.Log.e("MainScreen", "Bottom navigation error", e)
+                            }
+                        },
                         colors = NavigationBarItemDefaults.colors(
                             indicatorColor = Color.Transparent,
                             selectedIconColor = Color(0xFF28CDE2),
@@ -156,36 +180,66 @@ fun MainScreen() {
         bottomBar = { bottomBar?.invoke() }
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
-            when (selectedItem) {
-                is BottomNavItem.Home -> HomeScreen(
-                    modifier = Modifier,
-                    navController = navController,
-                    onShowTopBar = { showTopBar = it },
-                    onShowBottomBar = { showBottomBar = it },
-                    onNavigateToWallet = { selectedItem = BottomNavItem.Wallet },
-                    onNavigateToProfile = { selectedItem = BottomNavItem.Profile }
-                )
-                is BottomNavItem.Activity -> ActivityScreen(
-                    navController = navController,
-                    onShowTopBar = { showTopBar = it },
-                    onShowBottomBar = { showBottomBar = it }
-                )
-                is BottomNavItem.Promotion -> PromotionScreen(
-                    navController = navController,
-                    onShowTopBar = { showTopBar = it },
-                    onShowBottomBar = { showBottomBar = it }
-                )
-                is BottomNavItem.Wallet -> MainWalletScreen(
-                    navController = navController,
-                    onShowTopBar = { showTopBar = it },
-                    onShowBottomBar = { showBottomBar = it }
-                )
-                is BottomNavItem.Profile -> ProfileScreen(
-                    navController = navController,
-                    onShowTopBar = { showTopBar = it },
-                    onShowBottomBar = { showBottomBar = it },
-                    onNavigateToWallet = { selectedItem = BottomNavItem.Wallet }
-                )
+            // Show error message if navigation fails
+            navigationError?.let { error ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "Navigation Error",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Red
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = error, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            navigationError = null
+                            selectedItem = BottomNavItem.Home
+                        }
+                    ) {
+                        Text("Back to Home")
+                    }
+                }
+            } ?: run {
+                when (selectedItem) {
+                    is BottomNavItem.Home -> HomeScreen(
+                        modifier = Modifier,
+                        navController = navController,
+                        onShowTopBar = { showTopBar = it },
+                        onShowBottomBar = { showBottomBar = it },
+                        onNavigateToWallet = { selectedItem = BottomNavItem.Wallet },
+                        onNavigateToProfile = { selectedItem = BottomNavItem.Profile }
+                    )
+                    is BottomNavItem.Activity -> ActivityScreen(
+                        navController = navController,
+                        onShowTopBar = { showTopBar = it },
+                        onShowBottomBar = { showBottomBar = it }
+                    )
+                    is BottomNavItem.Promotion -> PromotionScreen(
+                        navController = navController,
+                        onShowTopBar = { showTopBar = it },
+                        onShowBottomBar = { showBottomBar = it }
+                    )
+                    is BottomNavItem.Wallet -> MainWalletScreen(
+                        navController = navController,
+                        onShowTopBar = { showTopBar = it },
+                        onShowBottomBar = { showBottomBar = it }
+                    )
+                    is BottomNavItem.Profile -> ProfileScreen(
+                        navController = navController,
+                        onShowTopBar = { showTopBar = it },
+                        onShowBottomBar = { showBottomBar = it },
+                        onNavigateToWallet = { selectedItem = BottomNavItem.Wallet }
+                    )
+                    else -> {}
+                }
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.weblite.kgf.ui.screens.payScreens
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -236,8 +237,15 @@ fun DepositScreen(
             depositViewModel = depositViewModel,
             onDepositClick = { amt ->
                 depositViewModel.setAmount(amt)
-                navController.navigate("payment_deposit/$amt")
-                Toast.makeText(context, "Depositing ₹$amt", Toast.LENGTH_SHORT).show()
+                try {
+                    // Encode the amount to handle special characters safely
+                    val encodedAmount = java.net.URLEncoder.encode(amt.toString(), "UTF-8")
+                    navController.navigate("payment_deposit/$encodedAmount")
+                    Toast.makeText(context, "Depositing ₹$amt", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Navigation error: ${e.message}", Toast.LENGTH_LONG).show()
+                    Log.e("DepositScreen", "Navigation error", e)
+                }
             }
         )
 

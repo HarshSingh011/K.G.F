@@ -42,6 +42,18 @@ fun PaymentDepositScreen(
     qrViewModel: QrCodeViewModel = hiltViewModel(),
     depositViewModel: DepositApiViewModel = hiltViewModel()
 ) {
+    // Safely parse the amount
+    val safeAmount = remember(amount) {
+        try {
+            // Remove currency symbols and clean the string
+            val cleanAmount = amount.replace("₹", "").replace("$", "").trim()
+            "₹ $cleanAmount"
+        } catch (e: Exception) {
+            Log.e("PaymentDepositScreen", "Error parsing amount: $amount", e)
+            "₹ 100.00" // fallback amount
+        }
+    }
+
     val qrImageUrl by qrViewModel.qrImageUrl.collectAsState()
     var utrNumber by remember { mutableStateOf("") }
     val utrValid = utrNumber.length == 12 && utrNumber.all { it.isDigit() }
@@ -122,7 +134,7 @@ fun PaymentDepositScreen(
                         color = Color.Black
                     )
                     Text(
-                        text = amount,
+                        text = safeAmount,
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
                         color = Color(0xFF007BFF)
@@ -204,7 +216,7 @@ fun PaymentDepositScreen(
             // Submit button
             Button(
                 onClick = {
-                    val amt = amount.filter { it.isDigit() }.toIntOrNull() ?: 0
+                    val amt = safeAmount.filter { it.isDigit() }.toIntOrNull() ?: 100
                     depositViewModel.submitDeposit(amt, utrNumber)
                 },
                 enabled = utrValid && !loading,

@@ -9,7 +9,6 @@ import androidx.navigation.compose.composable
 import com.weblite.kgf.ui.screens.payScreens.DepositScreen
 import com.weblite.kgf.ui.screens.payScreens.WithdrawScreen
 import com.weblite.kgf.ui.screens.payScreens.DepositHistory
-import com.weblite.kgf.ui.screens.payScreens.WithdrawHistory
 import com.weblite.kgf.ui.screens.payScreens.TransactionHistory
 import com.weblite.kgf.ui.screens.internalScreens.VipScreen
 import com.weblite.kgf.ui.screens.dashboard.ProfileMainContent
@@ -18,6 +17,7 @@ import android.app.Activity
 import com.weblite.kgf.ui.screens.internalScreens.Service24O7Screen
 import com.weblite.kgf.ui.screens.payScreens.GiftHistoryItem
 import com.weblite.kgf.ui.screens.payScreens.GiftScreen
+import com.weblite.kgf.ui.screens.payScreens.screens.history.WithdrawHistory
 
 const val SERVICE_24_7_ROUTE = "service_24_7"
 
@@ -70,12 +70,10 @@ fun ProfileNavHost(
         }
         composable(ON_WITHDRAW) {
             WithdrawScreen(
+                navController = navController,
                 onBackClick = { navController.popBackStack() },
                 onShowTopBar = onShowTopBar,
-                onShowBottomBar = onShowBottomBar,
-                onHistoryClick = {
-                    navController.navigate(ON_WITHDR_HIST)
-                }
+                onShowBottomBar = onShowBottomBar
             )
         }
         composable(ON_DEPO_HIST) {
@@ -115,6 +113,15 @@ fun ProfileNavHost(
                 onShowBottomBar = onShowBottomBar
             )
             //WindowCompat.setDecorFitsSystemWindows(window, false)
+        }
+        // Add PaymentDepositScreen route for navigation from DepositScreen
+        composable("payment_deposit/{amount}") { backStackEntry ->
+            val amount = backStackEntry.arguments?.getString("amount") ?: "0"
+            com.weblite.kgf.ui.screens.payScreens.PaymentDepositScreen(
+                amount = "₹ $amount",
+                navController = navController,
+                onBackClick = { navController.popBackStack() }
+            )
         }
     }
 }

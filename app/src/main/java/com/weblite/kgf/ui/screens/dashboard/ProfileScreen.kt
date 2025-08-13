@@ -83,14 +83,6 @@ import com.weblite.kgf.ui.components.ON_WITHDRAW
 import com.weblite.kgf.ui.components.ON_WITHDR_HIST
 import com.weblite.kgf.ui.components.PROFILE_MAIN_ROUTE
 import com.weblite.kgf.ui.components.WALLET_ROUTE
-import com.weblite.kgf.ui.screens.internalScreens.VipScreen
-import com.weblite.kgf.ui.screens.internalScreens.Service24O7Screen
-import com.weblite.kgf.ui.screens.payScreens.DepositHistory
-import com.weblite.kgf.ui.screens.payScreens.TransactionHistory
-import com.weblite.kgf.ui.screens.payScreens.WithdrawHistory
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.weblite.kgf.Api.MainViewModel
 import com.weblite.kgf.Api.SharedPrefManager

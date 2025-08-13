@@ -1,12 +1,11 @@
 package com.weblite.kgf.data.withdraw
 
-
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-object WithdrawApiProvider {
+object WithdrawHistoryApiProvider {
     private const val BASE_URL = "https://newkgfindia.com/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
@@ -17,12 +16,12 @@ object WithdrawApiProvider {
         .addInterceptor(loggingInterceptor)
         .build()
 
-    val api: WithdrawApi by lazy {
+    val api: WithdrawHistoryApi by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(WithdrawApi::class.java)
+            .create(WithdrawHistoryApi::class.java)
     }
 }

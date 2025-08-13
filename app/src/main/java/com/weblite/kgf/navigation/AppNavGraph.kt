@@ -76,13 +76,6 @@ fun AppNavGraph(
         composable(AppRoutes.AVIATOR) {
             // Add your Aviator screen here if needed
         }
-        composable("payment_deposit/{amount}") { backStackEntry ->
-            val amount = backStackEntry.arguments?.getString("amount") ?: "0"
-            PaymentDepositScreen(
-                amount = "₹ $amount",
-                navController = navController,
-                onBackClick = { navController.popBackStack() }
-            )
-        }
+        // Note: payment_deposit route is handled in WalletNavGraph to avoid duplication
     }
 }

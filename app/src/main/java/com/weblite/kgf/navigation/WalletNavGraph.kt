@@ -18,8 +18,8 @@ import com.weblite.kgf.ui.components.WALLET_MAIN
 import com.weblite.kgf.ui.screens.payScreens.DepositHistory
 import com.weblite.kgf.ui.screens.payScreens.DepositScreen
 import com.weblite.kgf.ui.screens.payScreens.PaymentDepositScreen
-import com.weblite.kgf.ui.screens.payScreens.WithdrawHistory
 import com.weblite.kgf.ui.screens.payScreens.WithdrawScreen
+import com.weblite.kgf.ui.screens.payScreens.screens.history.WithdrawHistory
 
 @Composable
 fun WalletNavGraph(
@@ -65,12 +65,10 @@ fun WalletNavGraph(
         }
         composable(ON_WITHDRAW) {
             WithdrawScreen(
+                navController = localNavController,
                 onBackClick = { localNavController.popBackStack() },
                 onShowTopBar = onShowTopBar,
-                onShowBottomBar = onShowBottomBar,
-                onHistoryClick = {
-                    localNavController.navigate(ON_WITHDR_HIST)
-                }
+                onShowBottomBar = onShowBottomBar
             )
         }
         composable(ON_DEPO_HIST) {
@@ -88,7 +86,12 @@ fun WalletNavGraph(
             )
         }
         composable("payment_deposit/{amount}") { backStackEntry ->
-            val amount = backStackEntry.arguments?.getString("amount") ?: "0"
+            val encodedAmount = backStackEntry.arguments?.getString("amount") ?: "0"
+            val amount = try {
+                java.net.URLDecoder.decode(encodedAmount, "UTF-8")
+            } catch (e: Exception) {
+                encodedAmount // fallback to original if decoding fails
+            }
             PaymentDepositScreen(
                 amount = "₹ $amount",
                 navController = localNavController,

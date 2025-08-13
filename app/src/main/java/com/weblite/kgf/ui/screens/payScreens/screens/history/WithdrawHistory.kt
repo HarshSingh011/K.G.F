@@ -1,4 +1,4 @@
-package com.weblite.kgf.ui.screens.payScreens
+package com.weblite.kgf.ui.screens.payScreens.screens.history
 
 import android.app.DatePickerDialog
 import android.widget.Toast
@@ -29,6 +29,10 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.weblite.kgf.Api.SharedPrefManager
+import com.weblite.kgf.ui.screens.payScreens.history.WithdrawHistoryViewModel
+import com.weblite.kgf.data.withdraw.WithdrawHistoryItem
 
 fun getStatusColor(status: String): Color {
     return when (status.lowercase()) {
@@ -38,58 +42,42 @@ fun getStatusColor(status: String): Color {
     }
 }
 
-data class WithdrawalData(
-    val amount: String,
-    val date: String,
-    val txnId: String,
-    val method: String,
-    val status: String
-)
+
+
 
 @Composable
 fun WithdrawHistory(
     onBackClick: () -> Unit = {},
     onShowTopBar: (Boolean) -> Unit,
-    onShowBottomBar: (Boolean) -> Unit
+    onShowBottomBar: (Boolean) -> Unit,
+    viewModel: WithdrawHistoryViewModel = hiltViewModel()
 ) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     val backgroundColor = Brush.verticalGradient(
         colors = listOf(Color(0xFF001B40), Color(0xFF002D60))
     )
-
-    var triggerFetch by remember { mutableStateOf(false) }
     var selectedOption by remember { mutableStateOf("All") }
     var selectedFilter by remember { mutableStateOf("All") }
     var selectedDate by remember { mutableStateOf("dd-mm-yyyy") }
     var expanded by remember { mutableStateOf(false) }
-    var showData by remember { mutableStateOf(true) }
-
-    val dummyData = listOf(
-        WithdrawalData("₹250.00", "2025-06-19 01:46:05", "TXN_68531e85", "UPI", "Pending"),
-        WithdrawalData("₹500.00", "2025-05-19 13:40:07", "TXN_682ae75f", "Bank Card", "Pending"),
-        WithdrawalData("₹600.00", "2025-06-15 17:50:00", "TXN_123456", "UPI", "Approved"),
-        WithdrawalData("₹700.00", "2025-06-10 10:10:10", "TXN_234567", "Bank Card", "Rejected")
-    )
-
     val datePickerDialog = remember {
         DatePickerDialog(context, { _, y, m, d ->
             selectedDate = String.format("%02d-%02d-%04d", d, m + 1, y)
         }, 2025, 5, 18)
     }
+    val filterOptions = listOf("All", "bank", "upi")
+    val userId = SharedPrefManager.getString("USER_ID")
+        ?: SharedPrefManager.getString("user_id")
+        ?: SharedPrefManager.getString("id")
+        ?: ""
+    val history by viewModel.history.collectAsState()
+    val loading by viewModel.loading.collectAsState()
+    val error by viewModel.error.collectAsState()
 
-    val filterOptions = listOf("All", "Bank Card", "UPI")
-
-    LaunchedEffect(triggerFetch) {
-        if (triggerFetch) {
-            showData = false
-            delay(1500)
-            showData = true
-            triggerFetch = false
-        }
-    }
-
-    LaunchedEffect(Unit) {
+    // Fetch on every entry
+    LaunchedEffect(userId) {
+        if (userId.isNotBlank()) viewModel.fetchWithdrawHistory(userId)
         onShowTopBar(false)
         onShowBottomBar(false)
     }
@@ -125,7 +113,7 @@ fun WithdrawHistory(
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             filterOptions.forEach { option ->
-                val isSelected = option == selectedOption
+                val isSelected = option.equals(selectedOption, true)
                 Button(
                     onClick = { selectedOption = option },
                     colors = ButtonDefaults.buttonColors(
@@ -135,7 +123,7 @@ fun WithdrawHistory(
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(option, fontSize = 14.sp)
+                    Text(option.replaceFirstChar { it.uppercase() }, fontSize = 14.sp)
                 }
             }
         }
@@ -173,8 +161,8 @@ fun WithdrawHistory(
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
                 ) {
-                    listOf("All", "Approved", "Rejected", "Pending").forEach { item ->
-                        DropdownMenuItem(text = { Text(item, color = Color.Black) }, onClick = {
+                    listOf("All", "approved", "rejected", "pending").forEach { item ->
+                        DropdownMenuItem(text = { Text(item.replaceFirstChar { it.uppercase() }, color = Color.Black) }, onClick = {
                             selectedFilter = item
                             expanded = false
                         })
@@ -206,35 +194,27 @@ fun WithdrawHistory(
                     Icon(Icons.Default.DateRange, contentDescription = null, tint = Color.Black)
                 }
             }
-
-            Button(
-                onClick = { triggerFetch = true },
-                modifier = Modifier.align(Alignment.CenterVertically).height(40.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black)
-            ) {
-                Text("Fetch", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (!showData) {
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        when {
+            loading -> Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Color.White)
             }
-        } else {
-            val filtered = dummyData.filter {
-                (selectedOption == "All" || it.method.equals(selectedOption, true)) &&
-                        (selectedFilter == "All" || it.status.equals(selectedFilter, true))
-            }
-
-            if (filtered.isEmpty()) {
-                Text("No records found.", color = Color.White, modifier = Modifier.align(Alignment.CenterHorizontally))
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    filtered.forEach {
-                        WithdrawCard(it)
+            error != null -> Text(error ?: "Unknown error", color = Color.Red, modifier = Modifier.align(Alignment.CenterHorizontally))
+            else -> {
+                val filtered = history.filter {
+                    (selectedOption == "All" || it.payment_method.equals(selectedOption, true)) &&
+                    (selectedFilter == "All" || it.step_2.equals(selectedFilter, true))
+                }
+                if (filtered.isEmpty()) {
+                    Text("No records found.", color = Color.White, modifier = Modifier.align(Alignment.CenterHorizontally))
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        filtered.forEach {
+                            WithdrawCardApi(it)
+                        }
                     }
                 }
             }
@@ -243,9 +223,9 @@ fun WithdrawHistory(
 }
 
 @Composable
-fun WithdrawCard(data: WithdrawalData) {
-    val statusColor = getStatusColor(data.status)
-    val statusTextColor = when (data.status.lowercase()) {
+fun WithdrawCardApi(data: WithdrawHistoryItem) {
+    val statusColor = getStatusColor(data.step_2 ?: "")
+    val statusTextColor = when ((data.step_2 ?: "").lowercase()) {
         "approved" -> Color(0xFFFFFFFF)
         "rejected" -> Color(0xFFFFFFFF)
         else -> Color(0xFF000000)
@@ -275,18 +255,67 @@ fun WithdrawCard(data: WithdrawalData) {
                     shape = RoundedCornerShape(6.dp),
                     modifier = Modifier.height(35.dp)
                 ) {
-                    Text(data.status, fontSize = 15.sp, color = statusTextColor)
+                    Text(data.step_2?.replaceFirstChar { it.uppercase() } ?: "", fontSize = 15.sp, color = statusTextColor)
                 }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            LabelValueText("Transaction Id: ", data.txnId)
-            LabelValueText("Payment Method: ", data.method)
-            LabelValueText("Amount: ", data.amount)
-            LabelValueText("Date: ", data.date)
+            LabelValueText("Transaction Id: ", data.transaction_id ?: "")
+            LabelValueText("Payment Method: ", data.payment_method ?: "")
+            LabelValueText("Amount: ", "₹${data.amount ?: "0.00"}")
+            LabelValueText("Date: ", data.created_at ?: "")
+            if ((data.step_2 ?: "").lowercase() == "rejected" && !data.rejection_reason.isNullOrBlank()) {
+                Text("Reason: ${data.rejection_reason}", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            }
         }
     }
 }
+
+//@Composable
+//fun WithdrawCard(data: WithdrawalData) {
+//    val statusColor = getStatusColor(data.status)
+//    val statusTextColor = when (data.status.lowercase()) {
+//        "approved" -> Color(0xFFFFFFFF)
+//        "rejected" -> Color(0xFFFFFFFF)
+//        else -> Color(0xFF000000)
+//    }
+//
+//    Card(
+//        modifier = Modifier.fillMaxWidth().shadow(6.dp, RoundedCornerShape(12.dp)),
+//        colors = CardDefaults.cardColors(containerColor = Color.White),
+//        shape = RoundedCornerShape(12.dp)
+//    ) {
+//        Column(modifier = Modifier.padding(16.dp)) {
+//            Row(
+//                modifier = Modifier.fillMaxWidth(),
+//                horizontalArrangement = Arrangement.SpaceBetween
+//            ) {
+//                Button(
+//                    onClick = {},
+//                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+//                    shape = RoundedCornerShape(6.dp),
+//                    modifier = Modifier.height(35.dp)
+//                ) {
+//                    Text("Withdraw", fontSize = 15.sp, color = Color.White)
+//                }
+//                Button(
+//                    onClick = {},
+//                    colors = ButtonDefaults.buttonColors(containerColor = statusColor),
+//                    shape = RoundedCornerShape(6.dp),
+//                    modifier = Modifier.height(35.dp)
+//                ) {
+//                    Text(data.status, fontSize = 15.sp, color = statusTextColor)
+//                }
+//            }
+//
+//            Spacer(modifier = Modifier.height(8.dp))
+//            LabelValueText("Transaction Id: ", data.txnId)
+//            LabelValueText("Payment Method: ", data.method)
+//            LabelValueText("Amount: ", data.amount)
+//            LabelValueText("Date: ", data.date)
+//        }
+//    }
+//}
 
 @Composable
 fun LabelValueText(label: String, value: String) {

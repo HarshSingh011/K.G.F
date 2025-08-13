@@ -184,6 +184,7 @@ data class BankDetailsRequest(
 )
 
 data class UpiDetailsRequest(
+    val user_id: String,
     val userName: String,
     val upi_id: String,
     val upiProvider: String
@@ -203,6 +204,7 @@ data class BankDetailsResponse(
 
 // Withdrawal
 data class WithdrawRequestBank(
+    val user_id: String,
     val amount: Int,
     val paymentMethod: String,
     val username: String,
@@ -211,6 +213,7 @@ data class WithdrawRequestBank(
 )
 
 data class WithdrawRequestUpi(
+    val user_id: String,
     val amount: Int,
     val paymentMethod: String,
     val upiId: String,
