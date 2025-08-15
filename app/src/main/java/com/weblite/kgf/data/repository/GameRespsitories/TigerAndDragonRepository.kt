@@ -5,6 +5,7 @@ import com.weblite.kgf.data.models.games.TigerPeriodIdResponse
 import com.weblite.kgf.data.models.games.TigerGameHistoryResponse
 import com.weblite.kgf.data.models.games.DragonTigerBetRequest
 import com.weblite.kgf.data.models.games.DragonTigerBetResponse
+import com.weblite.kgf.data.models.games.DragonTigerWinResultResponse
 import com.weblite.kgf.data.models.games.MyHistoryApiResponse
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -14,7 +15,7 @@ class TigerAndDragonRepository @Inject constructor(
     private val apiService: TigerAndDragonApiService
 ) {
 
-    suspend fun fetchDragonTigerWinResult(): Result<com.weblite.kgf.data.models.games.DragonTigerWinResultResponse> {
+    suspend fun fetchDragonTigerWinResult(): Result<DragonTigerWinResultResponse> {
         return try {
             val response = apiService.getDragonTigerWinResult()
             Result.success(response)

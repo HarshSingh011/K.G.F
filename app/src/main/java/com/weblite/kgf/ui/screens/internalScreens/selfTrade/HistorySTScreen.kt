@@ -1,4 +1,4 @@
-package com.example.weblite
+package com.weblite.kgf.ui.screens.internalScreens.selfTrade
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,7 +17,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.weblite.kgf.Api.MainViewModel
+import com.weblite.kgf.Api.SharedPrefManager
 import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 data class HistoryRecords(
@@ -30,13 +35,34 @@ data class HistoryRecords(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistorySTScreen() {
+fun HistorySTScreen(
+    viewModel: MainViewModel = hiltViewModel()
+) {
     var selectedDate by remember { mutableStateOf("01/07/2025") }
     var showDatePicker by remember { mutableStateOf(false) }
     val totalBonus = 8905
 
     // Sample history data - empty for "Data not found" state
-    val historyRecords = remember { emptyList<HistoryRecords>() }
+    val historyRecords by viewModel.missionDataResponse.collectAsState()
+
+    fun convertDateFormat(dateString: String): String {
+        val inputFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        val outputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+
+        val date = LocalDate.parse(dateString, inputFormatter)
+        return date.format(outputFormatter)
+    }
+
+    LaunchedEffect(Unit) {
+        val userId = SharedPrefManager.getString("user_id", "0")
+        viewModel.missionData(userId!!)
+    }
+
+    LaunchedEffect(Unit) {
+        val userId = SharedPrefManager.getString("user_id", "0")
+        val date = convertDateFormat(selectedDate)
+        viewModel.missionDataByDate(userId!!, date)
+    }
 
     Column(
         modifier = Modifier
@@ -171,7 +197,7 @@ fun HistorySTScreen() {
                 )
 
                 // Table Content
-                if (historyRecords.isEmpty()) {
+                if (historyRecords!!.isEmpty()) {
                     // Data not found state
                     Box(
                         modifier = Modifier
@@ -188,7 +214,9 @@ fun HistorySTScreen() {
                     }
                 } else {
                     // History records (when data is available)
-                    historyRecords.forEach { record ->
+                    var id: Int = 0
+                    historyRecords?.forEach { record ->
+                        id++
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -196,7 +224,7 @@ fun HistorySTScreen() {
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = record.sr.toString(),
+                                text = id.toString(),
                                 color = Color.Black,
                                 fontSize = 14.sp,
                                 modifier = Modifier.weight(0.8f),
@@ -217,14 +245,14 @@ fun HistorySTScreen() {
                                 textAlign = TextAlign.Center
                             )
                             Text(
-                                text = record.award,
+                                text = record.bonus_amount,
                                 color = Color.Black,
                                 fontSize = 14.sp,
                                 modifier = Modifier.weight(1.2f),
                                 textAlign = TextAlign.Center
                             )
                             Text(
-                                text = record.status,
+                                text = "Completed",
                                 color = Color.Black,
                                 fontSize = 14.sp,
                                 modifier = Modifier.weight(1.3f),

@@ -75,8 +75,6 @@ fun AuthDialog(
         when (loginState) {
             is Resource.Success -> {
                 val userid = loginState.data?.result?.user?.userId ?: "null"
-
-
                 SharedPrefManager.setString("user_id",userid)
                 Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
                 viewModel.resetLoginState()

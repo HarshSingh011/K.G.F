@@ -3,15 +3,18 @@ package com.weblite.kgf.data.repository.AuthRepositories
 import android.util.Log
 import com.weblite.kgf.Api.ApiService
 import com.weblite.kgf.data.PeriodIdResponse
+import com.weblite.kgf.data.models.auth.AwardResponse
 import com.weblite.kgf.data.models.auth.BetRequest
 import com.weblite.kgf.data.models.auth.BetResponse
 import com.weblite.kgf.data.models.auth.DashboardResponse
+import com.weblite.kgf.data.models.auth.FilteredMissionsResponse
 import com.weblite.kgf.data.models.auth.GameHistoryResponse
 import com.weblite.kgf.data.models.auth.LoginRequest
 import com.weblite.kgf.data.models.auth.LoginResponse
 import com.weblite.kgf.data.models.auth.MyHistoryResponse
 import com.weblite.kgf.data.models.auth.ProfileResponse
 import com.weblite.kgf.data.models.auth.PromotionViewResponse
+import com.weblite.kgf.data.models.auth.ReferralBonusResponse
 import com.weblite.kgf.data.models.auth.SendOtpRequest
 import com.weblite.kgf.data.models.auth.SendOtpResponse
 import com.weblite.kgf.data.models.auth.SignupRequest
@@ -159,4 +162,24 @@ class UserRepository @Inject constructor(
             Result.failure(e)
         }
     }
+
+
+
+    suspend fun missionData(userId: String): FilteredMissionsResponse? {
+        return apiService.missionData(userId)
+    }
+
+    suspend fun award(userId: String): AwardResponse? {
+        return apiService.activityAward(userId)
+    }
+
+    suspend fun missionDataByDate(userId: String, date: String): FilteredMissionsResponse {
+        return apiService.missionDataByDate(userId, date)
+    }
+
+    suspend fun invitationBonus(userId: String): ReferralBonusResponse? {
+        return apiService.invitationBonus(userId)
+    }
+
+
 }

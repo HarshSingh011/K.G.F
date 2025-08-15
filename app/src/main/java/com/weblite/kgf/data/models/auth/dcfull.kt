@@ -546,36 +546,7 @@ data class User(
 
 
 // Activity Award
-data class ActivityAwardResponse(
-    val total_betting_amount: Int,
-    val total_award_earned: TotalAmountAward,
-    val missions: List<Mission>
-) {
-    data class TotalAmountAward(
-        val total_amount_award: String
-    )
 
-    data class Mission(
-        val target: Int,
-        val name: String,
-        val award: Int,
-        val date: String,
-        val completed: Int,
-        val remaining: Int
-    )
-}
-
-// Referral Bonus
-data class ReferralBonusResponse(
-    val levels: List<Level>,
-    val level_counts: List<Int>,
-    val level_amounts: List<Int>
-) {
-    data class Level(
-        val required: Int,
-        val bonus: String
-    )
-}
 
 ///////////////////////////////////
 data class CommissionResponse(
@@ -723,6 +694,82 @@ data class MyHistoryItem(
     @SerializedName("calculated_totalAmount") val calculatedTotalAmount: Any // Can be Int or String
 )
 
+
+// Activity Award
+data class ActivityAwardResponse(
+    val total_betting_amount: Int,
+    val total_award_earned: TotalAmountAward,
+    val missions: MutableList<Mission>
+) {
+    data class TotalAmountAward(
+        val total_amount_award: String
+    )
+
+}
+data class Mission(
+    val target: Int,
+    val name: String,
+    val award: Int,
+    val date: String,
+    val completed: Int,
+    val remaining: Int
+)
+
+// Referral Bonus
+data class ReferralBonus(
+    val levels: List<Level>,
+    val level_counts: List<Int>,
+    val level_amounts: List<Int>,
+    val totalCommission: String,
+    val userIdsAtLevel: List<List<String>?>?
+) {
+    data class Level(
+        val required: Int,
+        val bonus: String
+    )
+}
+
+// Common response wrapper
+data class FilteredMissionsResponse(
+    val status: String,
+    val status_code: Int,
+    val msg: String,
+    val result: FilteredMissions
+)
+
+data class ReferralBonusResponse(
+    val status: String,
+    val status_code: Int,
+    val msg: String,
+    val result: ReferralBonus
+)
+
+
+
+// Common response wrapper
+data class AwardResponse(
+    val status: String,
+    val status_code: Int,
+    val msg: String,
+    val result: ActivityAwardResponse
+)
+
+
+
+data class FilteredMissions(
+    val filtered_missions: MutableList<FilteredMissionsList>,
+    val get_total_award: String?
+)
+
+data class FilteredMissionsList(
+    val id: Int,
+    val user_id: String,
+    val mission_name: String,
+    val bonus_amount: String,
+    val target: String,
+    val date: String,
+    val created_at: String,
+)
 
 data class CountdownTimeResponse(
     @SerializedName("minutesTens") val minutesTens: Int,

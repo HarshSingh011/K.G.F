@@ -132,7 +132,7 @@ fun HomeMainConten(
     }
 
     val scrollState = rememberScrollState()
-    val bannerImages = listOf("banners/Homepage_img1.jpg", "banners/Homepage_img2.jpg", "banners/Homepage_img3.jpg")
+    val bannerImages = listOf("banners/slider_1.jpg", "banners/slider_3.jpg", "banners/slider_3.jpg")
     val WingoItems = listOf("gameimg/Wingo_30.jpeg", "gameimg/Wingo_60.jpg")
     val K3Items = listOf("gameimg/K3_30.jpg", "gameimg/K3_60.jpg")
     val DragAviItems = listOf("gameimg/Dragon_tiger.jpeg", "gameimg/Aviator_img.png")

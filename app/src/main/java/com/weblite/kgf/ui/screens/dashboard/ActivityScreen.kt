@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,7 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -55,13 +53,12 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.weblite.InvitationRecordsScreen
-import com.example.weblite.InviteFriendsScreen
-import com.example.weblite.SelfTradeRewardScreen
+import com.weblite.kgf.ui.screens.internalScreens.invitation_bonus.InvitationRecordsScreen
+import com.weblite.kgf.ui.screens.internalScreens.invitation_bonus.InviteFriendsScreen
+import com.weblite.kgf.ui.screens.internalScreens.selfTrade.SelfTradeRewardScreen
 import com.weblite.kgf.R
 import com.weblite.kgf.data.CustomFont.Companion.AptosFontNormal
 import com.weblite.kgf.data.GiftCardData
-import com.weblite.kgf.ui.components.HOMESCREEN
 import com.weblite.kgf.utils.AssetIcon
 
 
@@ -103,8 +100,6 @@ fun ActivityScreen(
                 Toast.makeText(context, "Wingo 30 opened", Toast.LENGTH_SHORT).show()
             }
             SelfTradeRewardScreen()
-
-
         }
 
         composable("new_member_screen") {
@@ -267,7 +262,7 @@ fun ActivitySection(navController: NavController) {
                     label = "New member \ngift package",
                     contentDescription = "Icon of a blue gift box representing new member gift package",
                     onClick = {
-                      /*  navController.navigate("new_member_screen")*/
+                        /*  navController.navigate("new_member_screen")*/
                     }
                 )
                 IconLabel(
@@ -376,10 +371,10 @@ fun RewardCard(
                 .fillMaxSize()
                 .padding(1.dp)
                 .border(
-                width = 2.dp,
-                color = Color.Black,
-                shape = RoundedCornerShape(14.dp)
-            )
+                    width = 2.dp,
+                    color = Color.Black,
+                    shape = RoundedCornerShape(14.dp)
+                )
         ) {
             Column(
                 modifier = Modifier

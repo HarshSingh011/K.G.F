@@ -1,5 +1,7 @@
-package com.example.weblite
+package com.weblite.kgf.ui.screens.internalScreens.selfTrade
 
+import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,14 +19,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.weblite.kgf.R
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.weblite.kgf.Api.MainViewModel
+import com.weblite.kgf.Api.Resource
+import com.weblite.kgf.Api.SharedPrefManager
+import com.weblite.kgf.data.models.auth.Mission
+import kotlin.collections.listOf
 
 data class DailyMission(
     val title: String,
@@ -37,18 +44,44 @@ data class DailyMission(
 @Composable
 fun SelfTradeRewardScreen(
     onBackClick: () -> Unit = {},
-    onNavigationClick: (String) -> Unit = {}
+    onNavigationClick: (String) -> Unit = {},
+    viewModel: MainViewModel = hiltViewModel()
 ) {
     var selectedTab by remember { mutableStateOf("Daily Missions") }
 
-    val dailyMissions = remember {
-        listOf(
-            DailyMission("Daily betting bonus", "0", "500", "₹5.00"),
-            DailyMission("Daily betting bonus", "0", "5000", "₹40.00"),
-            DailyMission("Daily betting bonus", "0", "50000", "₹500.00"),
-            DailyMission("Daily betting bonus", "0", "100000", "₹1,000.00")
-        )
+//    var dailyMissions = remember {
+//        listOf(
+//            Mission("Daily betting bonus", "0", "500", "₹5.00"),
+//            Mission("Daily betting bonus", "0", "5000", "₹40.00"),
+//            Mission("Daily betting bonus", "0", "50000", "₹500.00"),
+//            Mission("Daily betting bonus", "0", "100000", "₹1,000.00")
+//        )
+//    }
+
+
+//    var dailyMissions =  remember {
+//        mutableListOf<Mission>()
+//    }
+//    var dailyMissions by remember { mutableStateOf(listOf<Mission>()) }
+//    LaunchedEffect(Unit) {
+//        val userId = SharedPrefManager.getString("user_id", "0")
+//        viewModel.award(userId.toString())
+//
+//        val missionState = viewModel.activityAward.value
+//        if (missionState?.data != null){
+//            dailyMissions = missionState.data.result.missions
+//            Log.d("TAG_DATA", "SelfTradeRewardScreen2: ${dailyMissions.size}")
+//        }
+//    }
+
+    val dailyMissions by viewModel.dailyMissions.collectAsState()
+
+    LaunchedEffect(Unit) {
+        val userId = SharedPrefManager.getString("user_id", "0")
+        viewModel.award(userId!!)
     }
+
+//    Log.d("TAG_DATA", "SelfTradeRewardScreen1: ${dailyMissions.size}")
 
     Box(
         modifier = Modifier
@@ -183,7 +216,7 @@ fun SelfTradeRewardScreen(
 }
 
 @Composable
-fun DailyMissionCard(mission: DailyMission) {
+fun DailyMissionCard(mission: Mission) {
     Box(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -213,14 +246,14 @@ fun DailyMissionCard(mission: DailyMission) {
 
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = mission.title,
+                        text = mission.name,
                         color = Color.LightGray,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(modifier = Modifier.padding(start = 20.dp))
                     Text(
-                        text = "${mission.progress}/${mission.target}",
+                        text = "${mission.completed}/${mission.target}",
                         color = Color(0xFF0B63CE),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
@@ -250,7 +283,7 @@ fun DailyMissionCard(mission: DailyMission) {
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = mission.reward,
+                            text = "₹${mission.award}",
                             color = Color(0xFF0B63CE),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
@@ -293,7 +326,13 @@ fun DailyMissionCard(mission: DailyMission) {
                             color = Color.Black,
                             shape = RoundedCornerShape(topStart = 25.dp, bottomEnd = 25.dp)
                         )
-                        .clip(RoundedCornerShape(topStart = 25.dp, topEnd = 0.dp, bottomEnd = 25.dp))
+                        .clip(
+                            RoundedCornerShape(
+                                topStart = 25.dp,
+                                topEnd = 0.dp,
+                                bottomEnd = 25.dp
+                            )
+                        )
                         .background(
                             Brush.horizontalGradient(
                                 colors = listOf(Color(0xFF0F8188), Color(0xFF2F4C5E))

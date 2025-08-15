@@ -1,12 +1,13 @@
-package com.example.weblite
+package com.weblite.kgf.ui.screens.internalScreens.invitation_bonus
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,17 +24,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.weblite.kgf.Api.MainViewModel
+import com.weblite.kgf.Api.SharedPrefManager
 import com.weblite.kgf.R
+import com.weblite.kgf.data.models.auth.ReferralBonus
+import com.weblite.kgf.data.models.auth.ReferralBonusResponse
 
-data class BonusLevel(
-    val level: Int,
-    val reward: String,
-    val requiredInvites: Int,
-    val rechargePerPerson: String,
-    val currentInvites: Int,
-    val currentDeposits: Int,
-    val isCompleted: Boolean
-)
+//data class BonusLevel(
+//    val level: Int,
+//    val reward: String,
+//    val requiredInvites: Int,
+//    val rechargePerPerson: String,
+//    val currentInvites: Int,
+//    val currentDeposits: Int,
+//    val isCompleted: Boolean
+//)
 
 @Composable
 fun InviteFriendsScreen(
@@ -42,21 +48,30 @@ fun InviteFriendsScreen(
     onInvitationRulesClick: () -> Unit = {},
     onInvitationRecordClick: () -> Unit = {},
     onShowTopBar: (Boolean) -> Unit,
-    onShowBottomBar: (Boolean) -> Unit
+    onShowBottomBar: (Boolean) -> Unit,
+    viewModel: MainViewModel = hiltViewModel()
 ) {
-    val bonusLevels = remember {
-        listOf(
-            BonusLevel(1, "₹55.00", 1, "₹500", 1, 1, true),
-            BonusLevel(2, "₹155.00", 3, "₹500", 3, 3, true),
-            BonusLevel(3, "₹555.00", 10, "₹500", 0, 0, false),
-            BonusLevel(4, "₹1,555.00", 30, "₹500", 0, 0, false),
-            BonusLevel(5, "₹2,555.00", 50, "₹500", 0, 0, false)
-        )
-    }
+//    val bonusLevels = remember {
+//        listOf(
+//            BonusLevel(1, "₹55.00", 1, "₹500", 1, 1, true),
+//            BonusLevel(2, "₹155.00", 3, "₹500", 3, 3, true),
+//            BonusLevel(3, "₹555.00", 10, "₹500", 0, 0, false),
+//            BonusLevel(4, "₹1,555.00", 30, "₹500", 0, 0, false),
+//            BonusLevel(5, "₹2,555.00", 50, "₹500", 0, 0, false)
+//        )
+//    }
     LaunchedEffect(Unit) {
         onShowTopBar(true)
         onShowBottomBar(false)
     }
+
+    val bonusLevels by viewModel.invitationResponse.collectAsState()
+
+    LaunchedEffect(Unit) {
+        val userId = SharedPrefManager.getString("user_id", "0")
+        viewModel.invitationData(userId!!)
+    }
+
 
     Box(
         modifier = Modifier
@@ -152,7 +167,6 @@ fun InviteFriendsScreen(
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         modifier = Modifier
-//                                            .weight(1f)
                                             .clickable { onInvitationRulesClick() }
                                             .padding(6.dp)
                                     ) {
@@ -209,10 +223,24 @@ fun InviteFriendsScreen(
                 }
 
                 // Bonus level cards
-                items(bonusLevels) { bonus ->
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        BonusLevelCard(bonus = bonus)
+//                items(bonusLevels?.result?.levels!!) { bonus ->
+//                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+//                        BonusLevelCard(bonus = bonus, )
+//                    }
+//                }
+
+                if (bonusLevels != null){
+                    itemsIndexed(bonusLevels?.result?.levels!!) { index, bonus ->
+                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                            BonusLevelCard(
+                                bonus = bonus,
+                                index = index, // pass index to your composable
+                                bonusLevels
+                            )
+                        }
                     }
+                }else{
+                    Log.d("TAG_DATA", "InviteFriendsScreen: ${bonusLevels?.result?.levels}")
                 }
             }
         }
@@ -220,7 +248,7 @@ fun InviteFriendsScreen(
 }
 
 @Composable
-fun BonusLevelCard(bonus: BonusLevel) {
+fun BonusLevelCard(bonus: ReferralBonus.Level, index: Int, bonusLevels: ReferralBonusResponse?) {
     Box(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -252,7 +280,7 @@ fun BonusLevelCard(bonus: BonusLevel) {
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = bonus.requiredInvites.toString(),
+                        text = bonus.required.toString(),
                         color = Color(0xFF0B63CE),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
@@ -276,7 +304,7 @@ fun BonusLevelCard(bonus: BonusLevel) {
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = bonus.rechargePerPerson,
+                        text = bonus.bonus,
                         color = Color(0xFF0B63CE),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
@@ -295,7 +323,7 @@ fun BonusLevelCard(bonus: BonusLevel) {
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(
-                            text = "${bonus.currentInvites}/${bonus.requiredInvites}",
+                            text = "${bonusLevels?.result?.level_counts[index]}/${bonus.required}",
                             color = Color(0xFF0B63CE),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
@@ -322,7 +350,7 @@ fun BonusLevelCard(bonus: BonusLevel) {
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(
-                            text = "${bonus.currentDeposits}/${bonus.requiredInvites}",
+                            text = "${bonusLevels?.result?.level_counts[index]}/${bonus.required}",
                             color = Color(0xFF0B63CE),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
@@ -346,13 +374,15 @@ fun BonusLevelCard(bonus: BonusLevel) {
                         .height(40.dp)
                         .clip(RoundedCornerShape(24.dp))
                         .background(
-                            if (bonus.isCompleted) Color(0xFF4CAF50) else Color(0xFFBDBDBD)
+                            if (bonus.required == bonusLevels?.result?.level_counts[index]) Color(
+                                0xFF4CAF50
+                            ) else Color(0xFFBDBDBD)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (bonus.isCompleted) "Completed" else "Unfinished",
-                        color = if (bonus.isCompleted) Color.White else Color.Black,
+                        text = if (bonus.required == bonusLevels?.result?.level_counts[index]) "Completed" else "Unfinished",
+                        color = if (bonus.required == bonusLevels?.result?.level_counts[index]) Color.White else Color.Black,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -378,7 +408,13 @@ fun BonusLevelCard(bonus: BonusLevel) {
                             color = Color(0xFF0B63CE),
                             shape = RoundedCornerShape(topStart = 25.dp, bottomEnd = 25.dp)
                         )
-                        .clip(RoundedCornerShape(topStart = 25.dp, topEnd = 0.dp, bottomEnd = 25.dp))
+                        .clip(
+                            RoundedCornerShape(
+                                topStart = 25.dp,
+                                topEnd = 0.dp,
+                                bottomEnd = 25.dp
+                            )
+                        )
                         .background(
                             Brush.horizontalGradient(
                                 colors = listOf(Color(0xFF0F8188), Color(0xFF2F4C5E))
@@ -386,8 +422,9 @@ fun BonusLevelCard(bonus: BonusLevel) {
                         )
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
+                    var ind = index + 1
                     Text(
-                        text = "Bonus ${bonus.level}",
+                        text = "Bonus $ind",
                         color = Color.White,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
@@ -396,7 +433,7 @@ fun BonusLevelCard(bonus: BonusLevel) {
 
                 // Reward amount
                 Text(
-                    text = bonus.reward,
+                    text = bonus.bonus,
                     color = Color(0xFF0B63CE),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,

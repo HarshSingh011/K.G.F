@@ -55,7 +55,7 @@ import kotlinx.coroutines.launch
 fun TigerAndDragonGameScreen(
     onShowTopBar: (Boolean) -> Unit,
     onShowBottomBar: (Boolean) -> Unit,
-    onBackClick: () -> Unit, // Added new parameter for back
+    onBackClick: () -> Unit,
     viewModel: TigerAndDragonViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -89,6 +89,12 @@ fun TigerAndDragonGameScreen(
     // Define chipValues here so it's available for addCoinToSection
     val chipValues = listOf(10, 50, 500, 1000, 5000)
 
+    // Betting state - disable betting when timer ends until new Period ID is updated
+    var isBettingEnabled by remember { mutableStateOf(true) }
+    
+    // Track last period ID to detect when new period is updated
+    var lastPeriodId by remember { mutableStateOf("") }
+
     // Popup state for bet placed
     var showBetPlacedPopup by remember { mutableStateOf(false) }
     var betPlacedText by remember { mutableStateOf("") }
@@ -112,6 +118,12 @@ fun TigerAndDragonGameScreen(
 
     // Helper to add coin to a section and call bet API immediately
     fun addCoinToSection(section: String) {
+        // Check if betting is enabled before allowing bet placement
+        if (!isBettingEnabled) {
+            Log.d("TigerAndDragonGameScreen", "Betting blocked - waiting for new Period ID")
+            return
+        }
+        
         val value = chipValues.getOrNull(selectedChipIndex) ?: return
         when (section) {
             "dragon" -> {
@@ -171,7 +183,7 @@ fun TigerAndDragonGameScreen(
         viewModel.fetchGameHistory()
     }
 
-    // Handle period ID updates and auto-fetch win results
+    // Handle period ID updates and control betting state
     LaunchedEffect(Unit) {
         viewModel.periodId.collect { resourceEvent ->
             when (resourceEvent) {
@@ -180,6 +192,12 @@ fun TigerAndDragonGameScreen(
                     if (response is TigerPeriodIdResponse && response.result != null && response.result.isNotEmpty()) {
                         val datetime = response.result[0].periodId
                         if (showPeriodId != datetime) {
+                            // New period ID received - enable betting
+                            if (lastPeriodId.isNotEmpty() && lastPeriodId != datetime) {
+                                isBettingEnabled = true
+                                Log.d("TigerAndDragonGameScreen", "New Period ID received - Betting ENABLED")
+                            }
+                            lastPeriodId = datetime
                             showPeriodId = datetime
                             Log.d("TigerAndDragonGameScreen", "Period ID updated: $datetime")
                         }
@@ -203,12 +221,38 @@ fun TigerAndDragonGameScreen(
         }
     }
 
-    // Handle screen orientation
+    // Handle screen orientation and status bar
     DisposableEffect(Unit) {
         val activity = context as? Activity
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        onDispose {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        
+        // Hide status bar immediately and ensure it stays hidden
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            val window = activity?.window
+            val decorView = window?.decorView
+            val controller = decorView?.windowInsetsController
+            controller?.hide(android.view.WindowInsets.Type.statusBars())
+            controller?.systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            Log.d("TigerAndDragonGameScreen", "Status bar hidden")
+            
+            onDispose {
+                // Restore orientation and status bar when leaving
+                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                controller?.show(android.view.WindowInsets.Type.statusBars())
+                Log.d("TigerAndDragonGameScreen", "Status bar restored")
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            activity?.window?.decorView?.systemUiVisibility = 
+                android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+            Log.d("TigerAndDragonGameScreen", "Status bar hidden (legacy)")
+            
+            onDispose {
+                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                @Suppress("DEPRECATION")
+                activity?.window?.decorView?.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_VISIBLE
+                Log.d("TigerAndDragonGameScreen", "Status bar restored (legacy)")
+            }
         }
     }
 
@@ -216,81 +260,111 @@ fun TigerAndDragonGameScreen(
     val winResult by viewModel.winResult.collectAsState()
     val showWinResult by viewModel.showWinResult.collectAsState()
     
-    // Track the last result that was actually shown to prevent ViewModel duplicates
+    // Display state for WinDialog - independent from GameHistory dialog
     var displayWinResult by remember { mutableStateOf<String?>(null) }
-    var lastShownResult by remember { mutableStateOf<String?>(null) }
-    var lastShownTime by remember { mutableStateOf(0L) }
-
-    DisposableEffect(Unit) {
-        val activity = context as? Activity
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            val window = activity?.window
-            val decorView = window?.decorView
-            val controller = decorView?.windowInsetsController
-            // Hide status bar
-            controller?.hide(android.view.WindowInsets.Type.statusBars())
-            onDispose {
-                // Restore status bar when leaving
-                controller?.show(android.view.WindowInsets.Type.statusBars())
-            }
-        } else {
-            onDispose { }
-        }
-    }
-
-    // Smart approach: Detect ViewModel duplicate triggers and prevent them
-    LaunchedEffect(showWinResult) {
-        val currentTime = System.currentTimeMillis()
-        Log.d("TigerAndDragonGameScreen", "showWinResult changed to: $showWinResult, winResult: $winResult")
-        
-        if (showWinResult && winResult != null) {
-            // Check if this is a duplicate trigger (same result within 2 seconds)
-            val isDuplicate = (winResult == lastShownResult && (currentTime - lastShownTime) < 2000)
-            
-            if (!isDuplicate) {
-                Log.d("TigerAndDragonGameScreen", "Dialog triggered by showWinResult transition for: $winResult (NEW)")
-                
-                // Update tracking variables
-                lastShownResult = winResult
-                lastShownTime = currentTime
-                
-                // Clear all coins immediately
-                dragonCoins = emptyList(); tigerCoins = emptyList(); tieCoins = emptyList()
-                dragonAllCoins = emptyList(); tigerAllCoins = emptyList(); tieAllCoins = emptyList()
-                selectedChipIndex = -1
-                
-                // Show the dialog
-                displayWinResult = winResult
-                
-                // Auto-dismiss after 500ms
-                delay(500)
-                displayWinResult = null
-                
-                // Hide the ViewModel result
-                viewModel.hideWinResult()
-                
-                Log.d("TigerAndDragonGameScreen", "Dialog cycle completed for: $winResult")
-            } else {
-                Log.d("TigerAndDragonGameScreen", "DUPLICATE trigger detected for: $winResult - ignored")
-                // Still hide the result to acknowledge the ViewModel trigger
-                viewModel.hideWinResult()
-            }
-        }
-    }
+    var isWinDialogFromTimer by remember { mutableStateOf(false) }
+    var winDialogTriggerKey by remember { mutableStateOf(0) } // Key to trigger separate dismissal effect
     
-    // Reset tracking after enough time has passed for new games
+    // Clear WinDialog when GameHistory dialog opens/closes to prevent interference
+    LaunchedEffect(showHistoryDialog) {
+        if (showHistoryDialog) {
+            Log.d("TigerAndDragonGameScreen", "GameHistory dialog opened - clearing any existing WinDialog")
+            displayWinResult = null
+            isWinDialogFromTimer = false
+            winDialogTriggerKey = 0 // Reset trigger key
+        } else {
+            Log.d("TigerAndDragonGameScreen", "GameHistory dialog closed - ensuring WinDialog is cleared")
+            displayWinResult = null
+            isWinDialogFromTimer = false
+            winDialogTriggerKey = 0 // Reset trigger key
+        }
+    }
+
+    // When timer ends, disable betting and start API sequence
     LaunchedEffect(timerEnded) {
         if (timerEnded) {
-            // Clear coins
+            Log.d("TigerAndDragonGameScreen", "Timer ended - DISABLING betting until new Period ID")
+            // Disable betting immediately when timer ends
+            isBettingEnabled = false
+            
+            Log.d("TigerAndDragonGameScreen", "Timer ended - starting API sequence")
+            // Set flag to indicate this will be a timer-triggered WinDialog
+            isWinDialogFromTimer = true
+            // First fetch the latest periodId (for betting control only, timer updates independently)
+            viewModel.fetchPeriodId()
+            Log.d("TigerAndDragonGameScreen", "Fetched period ID after timer ended")
+            // Wait a moment to ensure periodId is updated
+            delay(500)
+            // Now fetch the win result (WinDialog API)
+            viewModel.fetchWinResult()
+            Log.d("TigerAndDragonGameScreen", "Fetched win result after timer ended")
+        }
+    }
+
+    // WinDialog trigger logic - only checks conditions and sets display state
+    LaunchedEffect(showWinResult, winResult) {
+        Log.d("TigerAndDragonGameScreen", "showWinResult changed to: $showWinResult, winResult: $winResult")
+        
+        if (showWinResult && winResult != null && isWinDialogFromTimer && !showHistoryDialog) {
+            Log.d("TigerAndDragonGameScreen", "WinDialog triggered for: $winResult (Timer-based)")
+            
+            // Clear all coins immediately
             dragonCoins = emptyList(); tigerCoins = emptyList(); tieCoins = emptyList()
             dragonAllCoins = emptyList(); tigerAllCoins = emptyList(); tieAllCoins = emptyList()
             selectedChipIndex = -1
             
-            // Reset tracking after 10 seconds to allow same results in new games
-            delay(10000)
-            lastShownResult = null
-            lastShownTime = 0L
-            Log.d("TigerAndDragonGameScreen", "Reset result tracking for new game cycle")
+            // Show the dialog
+            displayWinResult = winResult
+            Log.d("TigerAndDragonGameScreen", "WinDialog displayed for result: $winResult")
+            
+            // Hide the ViewModel result immediately
+            viewModel.hideWinResult()
+            
+            // Trigger the separate dismissal effect
+            winDialogTriggerKey++
+            
+        } else if (showWinResult && winResult != null && !isWinDialogFromTimer) {
+            Log.d("TigerAndDragonGameScreen", "WinDialog blocked - triggered by dialog, not timer")
+            // Just hide the ViewModel result without showing dialog
+            viewModel.hideWinResult()
+        } else if (showWinResult && winResult != null && showHistoryDialog) {
+            Log.d("TigerAndDragonGameScreen", "WinDialog blocked - GameHistory dialog is open")
+            // Just hide the ViewModel result without showing dialog
+            viewModel.hideWinResult()
+        }
+    }
+    
+    // Separate LaunchedEffect for WinDialog dismissal - runs independently of timer
+    LaunchedEffect(winDialogTriggerKey) {
+        if (winDialogTriggerKey > 0 && displayWinResult != null) {
+            val currentResult = displayWinResult
+            Log.d("TigerAndDragonGameScreen", "Starting dismissal timer for: $currentResult")
+            
+            // Auto-dismiss after 500ms - this runs independently
+            delay(500)
+            
+            if (displayWinResult == currentResult) { // Only dismiss if it's still the same result
+                displayWinResult = null
+                Log.d("TigerAndDragonGameScreen", "WinDialog dismissed after 500ms for: $currentResult")
+                
+                // Reset flag immediately when dialog dismisses
+                isWinDialogFromTimer = false
+                
+                // Timer updates independently via ViewModel's fetchPeriodIdAndSyncTimer()
+                // No need to force timer update here - it will happen automatically
+                Log.d("TigerAndDragonGameScreen", "WinDialog cycle completed for: $currentResult - timer updates independently")
+            }
+        }
+    }
+    
+    // Clear coins when timer ends for new game cycle
+    LaunchedEffect(timerEnded) {
+        if (timerEnded) {
+            Log.d("TigerAndDragonGameScreen", "Timer ended - clearing coins and preparing for next cycle")
+            // Clear coins
+            dragonCoins = emptyList(); tigerCoins = emptyList(); tieCoins = emptyList()
+            dragonAllCoins = emptyList(); tigerAllCoins = emptyList(); tieAllCoins = emptyList()
+            selectedChipIndex = -1
         }
     }
 
@@ -487,7 +561,7 @@ fun TigerAndDragonGameScreen(
                                         bottomEnd = 0.dp
                                     ))
                                     .background(Color(0xFF2B3A4B))
-                                    .clickable { addCoinToSection("dragon") }
+                                    .clickable(enabled = isBettingEnabled) { addCoinToSection("dragon") }
                             ) {
                                 Column(
                                     modifier = Modifier.fillMaxSize(),
@@ -580,7 +654,7 @@ fun TigerAndDragonGameScreen(
                                     .fillMaxHeight()
                                     .weight(1f)
                                     .background(Color(0xFF43A047))
-                                    .clickable { addCoinToSection("tie") }
+                                    .clickable(enabled = isBettingEnabled) { addCoinToSection("tie") }
                             ) {
                                 // Image and text first
                                 Column(
@@ -669,7 +743,7 @@ fun TigerAndDragonGameScreen(
                                         bottomEnd = cornerRadius
                                     ))
                                     .background(Color(0xFFED6A5A))
-                                    .clickable { addCoinToSection("tiger") }
+                                    .clickable(enabled = isBettingEnabled) { addCoinToSection("tiger") }
                             ) {
                                 Column(
                                     modifier = Modifier.fillMaxSize(),
@@ -1126,7 +1200,7 @@ fun TigerAndDragonGameScreen(
             }
         }
         
-        // WinDialog with simplified state management
+        // WinDialog - only shows result when timer completes
         if (displayWinResult != null) {
             androidx.compose.material3.Surface(
                 modifier = Modifier

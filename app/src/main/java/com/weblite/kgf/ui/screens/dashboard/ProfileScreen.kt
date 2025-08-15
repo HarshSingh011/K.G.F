@@ -85,6 +85,7 @@ import com.weblite.kgf.ui.components.PROFILE_MAIN_ROUTE
 import com.weblite.kgf.ui.components.WALLET_ROUTE
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.weblite.kgf.Api.MainViewModel
+import com.weblite.kgf.Api.Resource
 import com.weblite.kgf.Api.SharedPrefManager
 import com.weblite.kgf.ui.navigation.ProfileNavHost
 import com.weblite.kgf.ui.navigation.SERVICE_24_7_ROUTE
@@ -274,6 +275,35 @@ fun ProfileMainContent(
             }
         )
     }
+
+    val updatePwdState = viewModel.updatePasswordState.value
+    LaunchedEffect(updatePwdState) {
+        when (updatePwdState) {
+            is Resource.Success -> {
+                Toast.makeText(context, updatePwdState.data?.message, Toast.LENGTH_SHORT).show()
+                viewModel.resetUpdatePasswordState()
+            }
+            is Resource.Error -> {
+                Toast.makeText(context, "Failed: ${updatePwdState.message}", Toast.LENGTH_SHORT).show()
+                viewModel.resetUpdatePasswordState()
+            }
+            else -> {}
+        }
+    }
+
+    if (showChangePasswordDialog) {
+        ChangePasswordDialog(
+            onDismiss = { showChangePasswordDialog = false },
+            onSubmit = { _newPass, _confirmPass ->
+                showChangePasswordDialog = false
+                scope.launch {
+//                    scaffoldState.snackbarHostState.showSnackbar("Password changed!")
+                    viewModel.updatePassword(mobile.trim(), _newPass.trim())
+                }
+            }
+        )
+    }
+
 
     Scaffold(scaffoldState = scaffoldState) {
         Column(

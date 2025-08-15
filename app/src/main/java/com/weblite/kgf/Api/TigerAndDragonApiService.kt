@@ -2,6 +2,7 @@ package com.weblite.kgf.Api
 
 import com.weblite.kgf.data.models.games.DragonTigerBetRequest
 import com.weblite.kgf.data.models.games.DragonTigerBetResponse
+import com.weblite.kgf.data.models.games.DragonTigerWinResultResponse
 import com.weblite.kgf.data.models.games.TigerPeriodIdResponse
 import com.weblite.kgf.data.models.games.TigerGameHistoryResponse
 import com.weblite.kgf.data.models.games.MyHistoryApiResponse
@@ -12,7 +13,7 @@ import retrofit2.http.Query
 
 interface TigerAndDragonApiService {
     @GET("web/Api/dragontigerWinResult")
-    suspend fun getDragonTigerWinResult(): com.weblite.kgf.data.models.games.DragonTigerWinResultResponse
+    suspend fun getDragonTigerWinResult(): DragonTigerWinResultResponse
 
     @GET("web/Api/dragonTigerPeriodID")
     suspend fun getTigerPeriodId(@Query("user_id") userId: String): TigerPeriodIdResponse

@@ -19,6 +19,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -44,7 +45,7 @@ class TigerAndDragonViewModel @Inject constructor(
                     if (win != null) {
                         _showWinResult.value = true
                         // Auto-hide after 3 seconds
-                        kotlinx.coroutines.delay(3000)
+                        delay(500)
                         _showWinResult.value = false
                     }
                 },
@@ -89,10 +90,10 @@ class TigerAndDragonViewModel @Inject constructor(
             while (true) {
                 try {
                     fetchPeriodId(syncTimer = true)
-                    kotlinx.coroutines.delay(5000) // Poll every 5 seconds for better performance
+                    delay(5000) // Poll every 5 seconds for better performance
                 } catch (e: Exception) {
                     Log.e("TigerAndDragonVM", "Error in period ID polling: ${e.message}", e)
-                    kotlinx.coroutines.delay(5000) // Continue polling even on error
+                    delay(5000) // Continue polling even on error
                 }
             }
         }
@@ -156,13 +157,7 @@ class TigerAndDragonViewModel @Inject constructor(
                         _periodId.emit(Resource.Success(periodResponse.copy()))
                         val newPeriodId = periodResponse.result.firstOrNull()?.periodId
                         
-                        // Check if period changed - if so, fetch win result for previous period
-                        if (_currentPeriodValue != null && _lastPeriodValue != null && 
-                            newPeriodId != _currentPeriodValue && newPeriodId != _lastPeriodValue) {
-                            Log.d("TigerAndDragonVM", "Period changed from $_currentPeriodValue to $newPeriodId - fetching win result")
-                            fetchWinResult()
-                        }
-                        
+                        // Just update period tracking - no automatic win result fetching
                         _lastPeriodValue = _currentPeriodValue
                         _currentPeriodValue = newPeriodId
                         
@@ -202,13 +197,7 @@ class TigerAndDragonViewModel @Inject constructor(
                         _periodId.emit(Resource.Success(periodResponse.copy()))
                         val newPeriodId = periodResponse.result.firstOrNull()?.periodId
                         
-                        // Check if period changed - if so, fetch win result for previous period
-                        if (_currentPeriodValue != null && _lastPeriodValue != null && 
-                            newPeriodId != _currentPeriodValue && newPeriodId != _lastPeriodValue) {
-                            Log.d("TigerAndDragonVM", "Period changed from $_currentPeriodValue to $newPeriodId - fetching win result")
-                            fetchWinResult()
-                        }
-                        
+                        // Just update period tracking - no automatic win result fetching
                         _lastPeriodValue = _currentPeriodValue
                         _currentPeriodValue = newPeriodId
                         

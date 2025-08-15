@@ -1,17 +1,30 @@
-package com.example.weblite
+package com.weblite.kgf.ui.screens.internalScreens.invitation_bonus
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,8 +35,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.weblite.kgf.R
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.weblite.kgf.Api.MainViewModel
+import com.weblite.kgf.Api.SharedPrefManager
+import com.weblite.kgf.R
 
 data class InvitationRecord(
     val srNo: Int,
@@ -41,25 +57,34 @@ fun InvitationRecordsScreen(
     onInvitationRecordClick: () -> Unit = {},
     onViewUserIdsClick: (Int) -> Unit = {},
     onShowTopBar: (Boolean) -> Unit,
-    onShowBottomBar: (Boolean) -> Unit
+    onShowBottomBar: (Boolean) -> Unit,
+    viewModel: MainViewModel = hiltViewModel()
 ) {
-    val invitationRecords = remember {
-        listOf(
-            InvitationRecord(1, 1, "₹55.00", 1, true),
-            InvitationRecord(2, 3, "₹155.00", 3, true),
-            InvitationRecord(3, 10, "₹555.00", 0, false),
-            InvitationRecord(4, 30, "₹1,555.00", 0, false),
-            InvitationRecord(5, 50, "₹2,555.00", 0, false),
-            InvitationRecord(6, 70, "₹3,555.00", 0, false),
-            InvitationRecord(7, 100, "₹5,555.00", 0, false),
-            InvitationRecord(8, 200, "₹10,955.00", 0, false),
-            InvitationRecord(9, 500, "₹25,555.00", 0, false)
-        )
-    }
+//    val invitationRecords = remember {
+//        listOf(
+//            InvitationRecord(1, 1, "₹55.00", 1, true),
+//            InvitationRecord(2, 3, "₹155.00", 3, true),
+//            InvitationRecord(3, 10, "₹555.00", 0, false),
+//            InvitationRecord(4, 30, "₹1,555.00", 0, false),
+//            InvitationRecord(5, 50, "₹2,555.00", 0, false),
+//            InvitationRecord(6, 70, "₹3,555.00", 0, false),
+//            InvitationRecord(7, 100, "₹5,555.00", 0, false),
+//            InvitationRecord(8, 200, "₹10,955.00", 0, false),
+//            InvitationRecord(9, 500, "₹25,555.00", 0, false)
+//        )
+//    }
     LaunchedEffect(Unit) {
         onShowTopBar(true)
         onShowBottomBar(false)
     }
+
+    val invitationRecords by viewModel.invitationResponse.collectAsState()
+
+    LaunchedEffect(Unit) {
+        val userId = SharedPrefManager.getString("user_id", "0")
+        viewModel.invitationData(userId!!)
+    }
+
 
     Box(
         modifier = Modifier
@@ -354,12 +379,14 @@ fun InvitationRecordsScreen(
                                             .background(Color(0xFFE0E0E0))
                                     )
 
+
                                     // Table Rows
-                                    invitationRecords.forEach { record ->
+                                    invitationRecords?.result?.levels?.forEachIndexed { index, record ->
                                         Row(
                                             modifier = Modifier.padding(12.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
+
                                             // Sr. No
                                             Box(
                                                 modifier = Modifier
@@ -367,8 +394,9 @@ fun InvitationRecordsScreen(
                                                     .padding(end = 8.dp),
                                                 contentAlignment = Alignment.Center
                                             ) {
+                                                var ind = index + 1
                                                 Text(
-                                                    text = record.srNo.toString(),
+                                                    text = ind.toString(),
                                                     color = Color.Black,
                                                     fontSize = 14.sp,
                                                     textAlign = TextAlign.Center
@@ -383,7 +411,7 @@ fun InvitationRecordsScreen(
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Text(
-                                                    text = record.levelRequired.toString(),
+                                                    text = record.required.toString(),
                                                     color = Color.Black,
                                                     fontSize = 14.sp,
                                                     textAlign = TextAlign.Center
@@ -398,7 +426,7 @@ fun InvitationRecordsScreen(
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Text(
-                                                    text = record.achievementBonus,
+                                                    text = record.bonus,
                                                     color = Color.Black,
                                                     fontSize = 14.sp,
                                                     textAlign = TextAlign.Center
@@ -413,7 +441,7 @@ fun InvitationRecordsScreen(
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Text(
-                                                    text = record.numberOfInvites.toString(),
+                                                    text = invitationRecords?.result?.level_counts[index].toString(),
                                                     color = Color.Black,
                                                     fontSize = 14.sp,
                                                     textAlign = TextAlign.Center
@@ -433,13 +461,13 @@ fun InvitationRecordsScreen(
                                                         .height(32.dp)
                                                         .clip(RoundedCornerShape(16.dp))
                                                         .background(
-                                                            if (record.isCompleted) Color(0xFF4CAF50) else Color(0xFFBDBDBD)
+                                                            if (record.required == invitationRecords?.result?.level_counts[index]) Color(0xFF4CAF50) else Color(0xFFBDBDBD)
                                                         ),
                                                     contentAlignment = Alignment.Center
                                                 ) {
                                                     Text(
-                                                        text = if (record.isCompleted) "Completed" else "Unfinished",
-                                                        color = if (record.isCompleted) Color.White else Color.Black,
+                                                        text = if (record.required == invitationRecords?.result?.level_counts[index]) "Completed" else "Unfinished",
+                                                        color = if (record.required == invitationRecords?.result?.level_counts[index]) Color.White else Color.Black,
                                                         fontSize = 11.sp,
                                                         fontWeight = FontWeight.Medium
                                                     )
@@ -459,7 +487,7 @@ fun InvitationRecordsScreen(
                                                         .height(32.dp)
                                                         .clip(RectangleShape)
                                                         .background(Color(0xFF00BCD4))
-                                                        .clickable { onViewUserIdsClick(record.srNo) },
+                                                        .clickable { onViewUserIdsClick(index) },
                                                     contentAlignment = Alignment.Center
                                                 ) {
                                                     Text(

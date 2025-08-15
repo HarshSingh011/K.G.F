@@ -10,9 +10,12 @@ import javax.inject.Inject
 import androidx.compose.runtime.State
 import com.weblite.kgf.data.models.auth.CommissionResponse
 import com.weblite.kgf.data.models.auth.DashboardResponse
+import com.weblite.kgf.data.models.auth.FilteredMissionsList
 import com.weblite.kgf.data.models.auth.LoginResponse
+import com.weblite.kgf.data.models.auth.Mission
 import com.weblite.kgf.data.models.auth.ProfileResponse
 import com.weblite.kgf.data.models.auth.PromotionViewResponse
+import com.weblite.kgf.data.models.auth.ReferralBonusResponse
 import com.weblite.kgf.data.models.auth.SendOtpResponse
 import com.weblite.kgf.data.models.auth.SignupResponse
 import com.weblite.kgf.data.models.auth.UpdatePasswordResponse
@@ -278,4 +281,68 @@ class MainViewModel @Inject constructor(
             _profileState.value = result
         }
     }
+
+
+    private val _dailyMissions = MutableStateFlow<List<Mission>>(emptyList())
+    val dailyMissions: StateFlow<List<Mission>> = _dailyMissions
+
+    fun award(userId: String) {
+        viewModelScope.launch {
+            try {
+                val missionState = repository.award(userId)
+                missionState?.result?.missions?.let { missions ->
+                    _dailyMissions.value = missions
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private val _missionDataResponse = MutableStateFlow<List<FilteredMissionsList>>(emptyList())
+    val missionDataResponse: StateFlow<List<FilteredMissionsList>?> = _missionDataResponse
+
+    fun missionData(userId: String) {
+        viewModelScope.launch {
+            try {
+                val missionState = repository.missionData(userId)
+                missionState?.result?.filtered_missions?.let { filteredMission ->
+                    _missionDataResponse.value = filteredMission
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun missionDataByDate(userId: String, date: String) {
+        viewModelScope.launch {
+            try {
+                val missionState = repository.missionDataByDate(userId, date)
+                missionState?.result?.filtered_missions?.let { filteredMission ->
+                    _missionDataResponse.value = filteredMission
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private val _invitationResponse = MutableStateFlow<ReferralBonusResponse?>(null)
+    val invitationResponse: StateFlow<ReferralBonusResponse?> = _invitationResponse
+
+    fun invitationData(userId: String) {
+        viewModelScope.launch {
+            try {
+                val invitationRecord = repository.invitationBonus(userId)
+                invitationRecord?.let { invitation ->
+                    _invitationResponse.value = invitation
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+
 }

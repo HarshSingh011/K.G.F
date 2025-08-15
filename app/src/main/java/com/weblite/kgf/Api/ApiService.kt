@@ -8,15 +8,18 @@ import com.weblite.kgf.data.PeriodIdResponse
 import com.weblite.kgf.data.K360GameHistoryResponse
 import com.weblite.kgf.data.K360MyHistoryResponse
 import com.weblite.kgf.data.K360PeriodIdResponse
+import com.weblite.kgf.data.models.auth.AwardResponse
 import com.weblite.kgf.data.models.auth.BetRequest
 import com.weblite.kgf.data.models.auth.BetResponse
 import com.weblite.kgf.data.models.auth.DashboardResponse
+import com.weblite.kgf.data.models.auth.FilteredMissionsResponse
 import com.weblite.kgf.data.models.auth.GameHistoryResponse
 import com.weblite.kgf.data.models.auth.LoginRequest
 import com.weblite.kgf.data.models.auth.LoginResponse
 import com.weblite.kgf.data.models.auth.MyHistoryResponse
 import com.weblite.kgf.data.models.auth.ProfileResponseWrapper
 import com.weblite.kgf.data.models.auth.PromotionViewResponse
+import com.weblite.kgf.data.models.auth.ReferralBonusResponse
 import com.weblite.kgf.data.models.auth.SendOtpRequest
 import com.weblite.kgf.data.models.auth.SendOtpResponse
 import com.weblite.kgf.data.models.auth.SignupRequest
@@ -147,4 +150,19 @@ interface ApiService {
         @Query("user_id") userId: String,
         @Query("date") date: String
     ): Response<com.weblite.kgf.domain.model.MyCommissionDateDetailsResponse>
+
+    @GET("web/Api/invitation_records")
+    suspend fun invitationBonus(@Query("user_id") userId: String): ReferralBonusResponse?
+
+    @GET("web/Api/mission_data")
+    suspend fun missionData(@Query("user_id") userId: String): FilteredMissionsResponse
+
+    @GET("web/Api/activityaward")
+    suspend fun activityAward(@Query("user_id") userId: String): AwardResponse
+
+    @GET("web/Api/mission_dataByDate")
+    suspend fun missionDataByDate(
+        @Query("user_id") userId: String,
+        @Query("dateFilter") dateFilter: String
+    ): FilteredMissionsResponse
 }
